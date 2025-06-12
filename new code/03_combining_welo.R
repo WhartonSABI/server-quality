@@ -194,4 +194,4 @@ subset_2024_f_na <- subset_2024_f %>%
 subset_2024_f <- subset_2024_f %>%
   filter(!is.na(player1_avg_welo) & !is.na(player2_avg_welo))
 
-write.csv(subset_2024_m, "../data/wimbledon_subset_2024_m.csv", row.names = FALSE)
+write.csv(subset_2024_f, "../data/wimbledon_subset_2024_f.csv", row.names = FALSE)
