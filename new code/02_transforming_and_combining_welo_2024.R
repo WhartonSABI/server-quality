@@ -28,6 +28,10 @@ add_speed_ratio_column <- function(data) {
 
 #-----------------------------------------------------------------------------------------------------
 
+## TODO: add P1Score, P2Score, PointServer, GameWinner to the subset
+
+#-----------------------------------------------------------------------------------------------------
+
 ### 2024 data
 
 # binary variable for whether the point was won by the server
@@ -38,6 +42,36 @@ wimbledon_2024 <- wimbledon_2024 %>%
   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
 
+#-----------------------------------------------------------------------------------------------------
+
+## TODO: add "state" column (server_score - returner_score), then importance of that score from "../data/score_importance_dtmc.csv"
+
+wimbledon_2024 <- wimbledon_2024 %>% 
+  mutate(P1Score = as.character(P1Score),
+         P2Score = as.character(P2Score),
+         PointServer = as.integer(PointServer),
+         PointWinner = as.integer(PointWinner),
+         GameWinner = as.integer(GameWinner),
+         server_score = if_else(PointServer == 1, P1Score, P2Score),
+         returner_score = if_else(PointServer == 1, P2Score, P1Score),
+         state = paste(server_score, returner_score, sep = "-")) %>% 
+  filter(state %in% c("0-0", "15-0", "30-0", "40-0",
+                      "0-15", "0-30", "0-40",
+                      "15-15", "30-15", "40-15",
+                      "15-30", "30-30", "40-30",
+                      "15-40", "30-40", "40-40",
+                      "40-AD", "AD-40"))
+
+unique_states <- unique(c(wimbledon_2024$state)) 
+length(unique_states) 
+
+score_importance_dtmc <- as.data.table(read.csv("../data/score_importance_dtmc.csv"))
+
+wimbledon_2024 <- left_join(wimbledon_2024, score_importance_dtmc, by = "state")
+colSums(is.na(wimbledon_2024))
+
+#-----------------------------------------------------------------------------------------------------
+
 # divide male & female
 wimbledon_2024_male <- wimbledon_2024[1:14489,]
 wimbledon_2024_female <- wimbledon_2024[14490:nrow(wimbledon_2024),]
@@ -45,13 +79,19 @@ wimbledon_2024_female <- wimbledon_2024[14490:nrow(wimbledon_2024),]
 wimbledon_2024_male <- add_speed_ratio_column(wimbledon_2024_male)
 wimbledon_2024_female <- add_speed_ratio_column(wimbledon_2024_female)
 
+#-----------------------------------------------------------------------------------------------------
+
+names(wimbledon_2024_male)
+
 subset_2024_m <- wimbledon_2024_male %>% # to make it easier for us to look through relevant columns
-  select(match_id, slam, year, ElapsedTime, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
-         P2DistanceRun, RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, SetNo, P1GamesWon, P2GamesWon)
+  select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
+         ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
 
 subset_2024_f <- wimbledon_2024_female %>% # to make it easier for us to look through relevant columns
-  select(match_id, slam, year, ElapsedTime, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
-         P2DistanceRun, RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, SetNo, P1GamesWon, P2GamesWon)
+  select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
+         ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.
@@ -86,22 +126,22 @@ subset_2024_f <- subset_2024_f %>%
 
 #-----------------------------------------------------------------------------------------------------
 
-## importance metric
-subset_2024_m <- subset_2024_m %>%
-  mutate(
-    Break_Point_Multiplier = ifelse(P1BreakPoint == 1 | P2BreakPoint == 1, 3.0, 1.0),
-    Late_Set_Multiplier = ifelse(pmax(P1GamesWon, P2GamesWon) >= 5, 1.8, 1.0),
-    Set_Progression_Multiplier = 1 + 0.4 * (SetNo - 1),
-    Importance = Break_Point_Multiplier * Late_Set_Multiplier * Set_Progression_Multiplier
-  )
-
-subset_2024_f <- subset_2024_f %>%
-  mutate(
-    Break_Point_Multiplier = ifelse(P1BreakPoint == 1 | P2BreakPoint == 1, 3.0, 1.0),
-    Late_Set_Multiplier = ifelse(pmax(P1GamesWon, P2GamesWon) >= 5, 1.8, 1.0),
-    Set_Progression_Multiplier = 1 + 0.4 * (SetNo - 1),
-    Importance = Break_Point_Multiplier * Late_Set_Multiplier * Set_Progression_Multiplier
-  )
+# ## importance metric
+# subset_2024_m <- subset_2024_m %>%
+#   mutate(
+#     Break_Point_Multiplier = ifelse(P1BreakPoint == 1 | P2BreakPoint == 1, 3.0, 1.0),
+#     Late_Set_Multiplier = ifelse(pmax(P1GamesWon, P2GamesWon) >= 5, 1.8, 1.0),
+#     Set_Progression_Multiplier = 1 + 0.4 * (SetNo - 1),
+#     Importance = Break_Point_Multiplier * Late_Set_Multiplier * Set_Progression_Multiplier
+#   )
+# 
+# subset_2024_f <- subset_2024_f %>%
+#   mutate(
+#     Break_Point_Multiplier = ifelse(P1BreakPoint == 1 | P2BreakPoint == 1, 3.0, 1.0),
+#     Late_Set_Multiplier = ifelse(pmax(P1GamesWon, P2GamesWon) >= 5, 1.8, 1.0),
+#     Set_Progression_Multiplier = 1 + 0.4 * (SetNo - 1),
+#     Importance = Break_Point_Multiplier * Late_Set_Multiplier * Set_Progression_Multiplier
+#   )
 
 #-----------------------------------------------------------------------------------------------------
 

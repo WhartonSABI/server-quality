@@ -37,7 +37,10 @@ wimbledon_combined <- rbindlist(lapply(
     P2Score = as.character(P2Score),
     PointServer = as.integer(PointServer),
     PointWinner = as.integer(PointWinner),
-    GameWinner = as.integer(GameWinner)
+    GameWinner = as.integer(GameWinner),
+    server_score = if_else(PointServer == 1, P1Score, P2Score),
+    returner_score = if_else(PointServer == 1, P2Score, P1Score),
+    state = paste(P1Score, P2Score, sep = "-")
   ) %>%
   filter(!is.na(P1Score), !is.na(P2Score), !is.na(PointServer), !is.na(PointWinner), !is.na(GameWinner))
 

@@ -1,4 +1,4 @@
-# rm(list=ls())
+rm(list=ls())
 # install.packages("welo")
 library(welo)
 library(tidyverse)
@@ -7,11 +7,14 @@ library(ggplot2)
 
 #-----------------------------------------------------------------------------------------------------
 
-## wimbledon 2021
 subset_m <- as.data.table(read.csv("../data/wimbledon_subset_m.csv"))
 subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
 
 names(subset_m)
+
+#-----------------------------------------------------------------------------------------------------
+
+## TODO: create new column for state of game (based on P1Score and P2Score). then, add score importance metric.
 
 #-----------------------------------------------------------------------------------------------------
 
