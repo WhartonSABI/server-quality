@@ -177,7 +177,7 @@ atp_2024_welo_avg <- atp_2024_welo_subset %>%
 
 # find number of unique entries in player1 and player2 for subset_2024_m
 unique_players_2024_m <- unique(c(subset_2024_m$player1_name, subset_2024_m$player2_name)) 
-length(unique_players_2024_m) # 71
+length(unique_players_2024_m) 
 
 # make P column in atp_2024_welo_avg all lowercase
 atp_2024_welo_avg <- atp_2024_welo_avg %>%
@@ -236,7 +236,7 @@ wta_2024_welo_avg <- wta_2024_welo_avg %>%
 
 # find number of unique entries in player1 and player2 for subset_2024_m
 unique_players_2024_f <- unique(c(subset_2024_f$player1_name, subset_2024_f$player2_name)) 
-length(unique_players_2024_f) # 72
+length(unique_players_2024_f) 
 
 # make P column in atp_2021_welo_avg all lowercase
 wta_2024_welo_avg <- wta_2024_welo_avg %>%

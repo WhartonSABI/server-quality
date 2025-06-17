@@ -1,4 +1,4 @@
-# rm(list=ls())
+rm(list=ls())
 # install.packages("welo")
 library(welo)
 library(tidyverse)
@@ -38,20 +38,54 @@ wimbledon_2021 <- wimbledon_2021 %>%
   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
   mutate(serving_player_won = ifelse((ServeNumber == 1 & PointWinner == 1) | (ServeNumber == 2 & PointWinner == 2), 1, 0))
 
+#-----------------------------------------------------------------------------------------------------
+
+wimbledon_2021 <- wimbledon_2021 %>% 
+  mutate(P1Score = as.character(P1Score),
+         P2Score = as.character(P2Score),
+         PointServer = as.integer(PointServer),
+         PointWinner = as.integer(PointWinner),
+         GameWinner = as.integer(GameWinner),
+         server_score = if_else(PointServer == 1, P1Score, P2Score),
+         returner_score = if_else(PointServer == 1, P2Score, P1Score),
+         state = paste(server_score, returner_score, sep = "-")) %>% 
+  filter(state %in% c("0-0", "15-0", "30-0", "40-0",
+                      "0-15", "0-30", "0-40",
+                      "15-15", "30-15", "40-15",
+                      "15-30", "30-30", "40-30",
+                      "15-40", "30-40", "40-40",
+                      "40-AD", "AD-40"))
+
+unique_states <- unique(c(wimbledon_2021$state)) 
+length(unique_states) 
+
+score_importance_dtmc <- as.data.table(read.csv("../data/score_importance_dtmc.csv"))
+
+wimbledon_2021 <- left_join(wimbledon_2021, score_importance_dtmc, by = "state")
+colSums(is.na(wimbledon_2021))
+
+#-----------------------------------------------------------------------------------------------------
+
 # divide male & female
-wimbledon_2021_male <- wimbledon_2021[1:14328,]
-wimbledon_2021_female <- wimbledon_2021[14329:nrow(wimbledon_2021),]
+wimbledon_2021_male <- wimbledon_2021[1:13987,]
+wimbledon_2021_female <- wimbledon_2021[13988:nrow(wimbledon_2021),]
 
 wimbledon_2021_male <- add_speed_ratio_column(wimbledon_2021_male)
 wimbledon_2021_female <- add_speed_ratio_column(wimbledon_2021_female)
 
+#-----------------------------------------------------------------------------------------------------
+
+names(wimbledon_2021_male)
+
 subset_2021_m <- wimbledon_2021_male %>% # to make it easier for us to look through relevant columns
-  select(match_id, slam, year, ElapsedTime, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
-         P2DistanceRun, RallyCount, serving_player_won, speed_ratio)
+  select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
+         ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
 
 subset_2021_f <- wimbledon_2021_female %>% # to make it easier for us to look through relevant columns
-  select(match_id, slam, year, ElapsedTime, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, ServeWidth, ServeDepth, RallyCount, GameNo, P1DistanceRun,
-         P2DistanceRun, RallyCount, serving_player_won, speed_ratio)
+  select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
+         ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.
@@ -118,7 +152,7 @@ atp_2021_welo_avg <- atp_2021_welo_subset %>%
 
 # find number of unique entries in player1 and player2 for subset_2021_m
 unique_players_2021_m <- unique(c(subset_2021_m$player1_name, subset_2021_m$player2_name)) 
-length(unique_players_2021_m) # 74
+length(unique_players_2021_m) 
 
 # make P column in atp_2021_welo_avg all lowercase
 atp_2021_welo_avg <- atp_2021_welo_avg %>%
