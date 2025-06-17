@@ -149,10 +149,13 @@ colSums(is.na(wimbledon_2015_matches))
 wimbledon_2015_points <- as.data.table(read.csv("../data/raw_data/2015-wimbledon-points.csv"))
 colSums(is.na(wimbledon_2015_points))
 
-# remove all cols with NAs
 wimbledon_2015_matches <- wimbledon_2015_matches %>%
   select(where(~ all(!is.na(.))))
 names(wimbledon_2015_matches)
+
+# remove rows where PointWinner has NA value
+wimbledon_2015_points <- wimbledon_2015_points %>%
+  filter(!is.na(PointWinner))
 
 wimbledon_2015_points <- wimbledon_2015_points %>%
   select(where(~ all(!is.na(.))))
