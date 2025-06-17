@@ -119,4 +119,4 @@ importance_df <- df_scores %>%
   mutate(importance = abs(Pwin_TRUE - Pwin_FALSE)) %>%
   arrange(desc(importance))
 
-write.csv(importancedf, "../data/score_importance_dtmc.csv", row.names = FALSE)
+write.csv(importance_df, "../data/score_importance_dtmc.csv", row.names = FALSE)
