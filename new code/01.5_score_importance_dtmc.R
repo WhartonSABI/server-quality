@@ -40,7 +40,7 @@ wimbledon_combined <- rbindlist(lapply(
     GameWinner = as.integer(GameWinner),
     server_score = if_else(PointServer == 1, P1Score, P2Score),
     returner_score = if_else(PointServer == 1, P2Score, P1Score),
-    state = paste(P1Score, P2Score, sep = "-")
+    state = paste(server_score, returner_score, sep = "-")
   ) %>%
   filter(!is.na(P1Score), !is.na(P2Score), !is.na(PointServer), !is.na(PointWinner), !is.na(GameWinner))
 
@@ -54,7 +54,6 @@ wimbledon_combined <- wimbledon_combined[-nrow(wimbledon_combined), ]
 # Prepare and clean the data
 df <- wimbledon_combined %>%
   mutate(
-    state = paste(P1Score, P2Score, sep = "-"),
     server = if_else(PointServer == 1, "P1", "P2"),
     server_won_point = if_else((server == "P1" & PointWinner == 1) |
                                  (server == "P2" & PointWinner == 2), TRUE, FALSE),
@@ -66,7 +65,7 @@ df <- wimbledon_combined %>%
                       "15-15", "30-15", "40-15",
                       "15-30", "30-30", "40-30",
                       "15-40", "30-40", "40-40",
-                      "40-AD", "AD-40"))
+                      "40-AD", "AD-40")) 
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -99,6 +98,15 @@ df <- df %>%
     game_winner_is_server = if_else((server == "P1" & GameWinner == 1) |
                                       (server == "P2" & GameWinner == 2), 1, 0)
   )
+
+df <- df %>%
+  filter(PointServer %in% c(1, 2))
+
+#-----------------------------------------------------------------------------------------------------
+
+## filter to just rows where state is 0-15
+df_0_15 <- df %>%
+  filter(state == "0-15")
 
 #-----------------------------------------------------------------------------------------------------
 
