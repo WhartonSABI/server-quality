@@ -130,3 +130,24 @@ importance_df <- df_scores %>%
   arrange(desc(importance))
 
 write.csv(importance_df, "../data/score_importance_dtmc.csv", row.names = FALSE)
+
+
+#-----------------------------------------------------------------------------------------------------
+
+# importance_df <- as.data.table(read.csv("../data/score_importance_dtmc.csv"))
+# 
+# subset_m <- as.data.table(read.csv("../data/wimbledon_subset_m.csv"))
+# subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
+# 
+# # get rid of importance column from subset_m
+# subset_m[, importance := NULL]
+# subset_f[, importance := NULL]
+# 
+# subset_m <- left_join(subset_m, importance_df %>% select(state, importance), by = "state")
+# subset_f <- left_join(subset_f, importance_df %>% select(state, importance), by = "state")
+# 
+# colSums(is.na(subset_m))
+# colSums(is.na(subset_f))
+# 
+# write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
+# write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
