@@ -38,9 +38,9 @@ wimbledon_combined <- rbindlist(lapply(
     PointServer = as.integer(PointServer),
     PointWinner = as.integer(PointWinner),
     GameWinner = as.integer(GameWinner),
-    server_score = if_else(PointServer == 1, P1Score, P2Score),
-    returner_score = if_else(PointServer == 1, P2Score, P1Score),
-    state = paste(server_score, returner_score, sep = "-")
+    # server_score = if_else(PointServer == 1, P1Score, P2Score),
+    # returner_score = if_else(PointServer == 1, P2Score, P1Score),
+    state = paste(P1Score, P2Score, sep = "-")
   ) %>%
   filter(!is.na(P1Score), !is.na(P2Score), !is.na(PointServer), !is.na(PointWinner), !is.na(GameWinner))
 
@@ -54,11 +54,10 @@ wimbledon_combined <- wimbledon_combined[-nrow(wimbledon_combined), ]
 # Prepare and clean the data
 df <- wimbledon_combined %>%
   mutate(
-    server = if_else(PointServer == 1, "P1", "P2"),
-    server_won_point = if_else((server == "P1" & PointWinner == 1) |
-                                 (server == "P2" & PointWinner == 2), TRUE, FALSE),
-    game_winner_is_server = if_else((server == "P1" & GameWinner == 1) |
-                                      (server == "P2" & GameWinner == 2), 1, 0)
+    server_won_point = if_else((PointServer == 1 & PointWinner == 1) |
+                                 (PointServer == 2 & PointWinner == 2), TRUE, FALSE),
+    game_winner_is_server = if_else((PointServer == 1 & GameWinner == 1) |
+                                      (PointServer == 2 & GameWinner == 2), 1, 0)
   ) %>% 
   filter(state %in% c("0-0", "15-0", "30-0", "40-0",
                       "0-15", "0-30", "0-40",
@@ -95,8 +94,8 @@ df <- df %>%
 
 df <- df %>%
   mutate(
-    game_winner_is_server = if_else((server == "P1" & GameWinner == 1) |
-                                      (server == "P2" & GameWinner == 2), 1, 0)
+    game_winner_is_server = if_else((PointServer == 1 & GameWinner == 1) |
+                                      (PointServer == 2 & GameWinner == 2), 1, 0)
   )
 
 df <- df %>%
@@ -104,9 +103,9 @@ df <- df %>%
 
 #-----------------------------------------------------------------------------------------------------
 
-## filter to just rows where state is 0-15
-df_0_15 <- df %>%
-  filter(state == "0-15")
+# ## filter to just rows where state is 0-15
+# df_0_15 <- df %>%
+#   filter(state == "0-15")
 
 #-----------------------------------------------------------------------------------------------------
 

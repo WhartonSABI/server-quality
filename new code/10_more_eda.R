@@ -19,7 +19,6 @@ subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
 
 names(subset_m)
 
-
 subset_m_second <- subset_m[ServeNumber == 2]
 subset_f_second <- subset_f[ServeNumber == 2]
 
