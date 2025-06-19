@@ -12,15 +12,6 @@ subset_f <- as.data.table(read.csv("../data/wimbledon_subset_f.csv"))
 
 names(subset_m)
 
-subset_m <- subset_m %>%
-  filter(ServeDepth != "", ServeWidth != "")
-
-subset_f <- subset_f %>%
-  filter(ServeDepth != "", ServeWidth != "")
-
-unique_servedepth <- unique(c(subset_f$ServeDepth)) 
-unique_servewidth <- unique(c(subset_f$ServeWidth))
-
 #-----------------------------------------------------------------------------------------------------
 
 # # Convert ELO to logistic (Bradley-Terry scale)
@@ -28,16 +19,16 @@ unique_servewidth <- unique(c(subset_f$ServeWidth))
 # subset_m[, welo_p2_bt := 0.0057565 * player2_avg_welo]
 # 
 # ## male
-# subset_m <- subset_m %>% 
+# subset_m <- subset_m %>%
 #   mutate(p_server_beats_returner <- ifelse(PointServer == 1,
 #                                            1 / (1 + exp(welo_p1_bt - welo_p2_bt)),
 #                                            1 / (1 + exp(welo_p2_bt - welo_p1_bt))))
 # 
 # # rename column in subset_m
-# setnames(subset_m, old = c("... <- NULL"), 
+# setnames(subset_m, old = c("... <- NULL"),
 #          new = c("p_server_beats_returner"))
 # 
-# # write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
+# write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -46,16 +37,16 @@ unique_servewidth <- unique(c(subset_f$ServeWidth))
 # subset_f[, welo_p2_bt := 0.0057565 * player2_avg_welo]
 # 
 # ## female
-# subset_f <- subset_f %>% 
+# subset_f <- subset_f %>%
 #   mutate(p_server_beats_returner <- ifelse(PointServer == 1,
 #                                            1 / (1 + exp(welo_p1_bt - welo_p2_bt)),
 #                                            1 / (1 + exp(welo_p2_bt - welo_p1_bt))))
 # 
 # # rename column in subset_f
-# setnames(subset_f, old = c("... <- NULL"), 
+# setnames(subset_f, old = c("... <- NULL"),
 #          new = c("p_server_beats_returner"))
 # 
-# # write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
+# write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
 
 # -----------------------------------------------------------------------------------------------------
 
@@ -101,43 +92,43 @@ summary(logit_model_f) ## not significant
 
 ## add covariates
 
-logit_model_2_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds, 
+logit_model_2_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed, 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_2_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds not significant
+summary(logit_model_2_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds significant ** (neg coef)
 
-logit_model_2_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds, 
+logit_model_2_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed, 
                        data = subset_f_second, family = "binomial")
 summary(logit_model_2_f) ## neither significant
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add second serve speed ratio
-logit_model_3_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio, 
+logit_model_3_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio, 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_3_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds not significant, speed_ratio not significant
+summary(logit_model_3_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds significant ** (neg coef), speed_ratio not significant
 
-logit_model_3_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio, 
+logit_model_3_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio, 
                        data = subset_f_second, family = "binomial")
 summary(logit_model_3_f) ## nothing significant
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add score importance
-logit_model_4_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio + importance, 
+logit_model_4_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio + importance, 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_4_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant. but intercept is significant *** (neg coef)
+summary(logit_model_4_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds significant ** (neg coef), speed_ratio and importance not significant
 
-logit_model_4_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + speed_ratio + importance,  
+logit_model_4_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio + importance,  
                        data = subset_f_second, family = "binomial")
 summary(logit_model_4_f) ## nothing significant
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add location of serve
-logit_model_5_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
+logit_model_5_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_5_m) ## p_server_beats_returner significant *** (pos coef), nothing else significant
-logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
+summary(logit_model_5_m) ## p_server_beats_returner significant *** (pos coef), ElapsedSeconds significant ** (neg coef), speed_ratio & importance & serve location not significant
+logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_second, family = "binomial")
 summary(logit_model_5_f) ## nothing significant
 

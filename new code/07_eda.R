@@ -19,7 +19,7 @@ subset_f_second <- subset_f[ServeNumber == 2]
 #-----------------------------------------------------------------------------------------------------
 
 ## corr matrix male
-numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds", "importance", "speed_ratio")
+numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds_fixed", "importance", "speed_ratio")
 
 subset_m_x <- subset_m_second %>% select(all_of(numerical_x_cols))
 
@@ -60,7 +60,7 @@ ggsave("../images/corr_matrix_male.png", bg = "white",
 #-----------------------------------------------------------------------------------------------------
 
 ## corr matrix female
-numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds", "importance", "speed_ratio")
+numerical_x_cols <- c("p_server_beats_returner", "ElapsedSeconds_fixed", "importance", "speed_ratio")
 
 subset_f_x <- subset_f_second %>% select(all_of(numerical_x_cols))
 
