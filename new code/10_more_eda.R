@@ -1,7 +1,7 @@
 ## ideas:
 # (done) wElo ratings vs. serve speed ratio and/or serve location (do better players perform differently?)
 # (done) elapsed_seconds vs. serve speed ratio and/or serve location (does strategy change as match goes on?)
-# importance vs. serve speed ratio and/or serve location (does strategy change in important points?)
+# (done) importance vs. serve speed ratio and/or serve location (does strategy change in important points?)
 
 #-----------------------------------------------------------------------------------------------------
 
