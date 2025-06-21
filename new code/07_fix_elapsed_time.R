@@ -55,7 +55,7 @@ subset_m <- subset_m %>%
   select(-lag_elapsed, -time_diff, -avg_time_diff, -flagged)
 colSums(is.na(subset_m))
 
-# write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -95,6 +95,6 @@ subset_f <- subset_f %>%
   select(-lag_elapsed, -time_diff, -avg_time_diff, -flagged)
 colSums(is.na(subset_f))
 
-# write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------

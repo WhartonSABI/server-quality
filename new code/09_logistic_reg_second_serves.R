@@ -60,11 +60,11 @@ subset_f_second <- subset_f[ServeNumber == 2]
 ## logistic regression for serving_player_won vs. p_server_beats_returner
 logit_model_m <- glm(serving_player_won ~ p_server_beats_returner, 
                      data = subset_m_second, family = "binomial")
-summary(logit_model_m) ## p_server_beats_returner significant *** (neg coef)
+summary(logit_model_m) ## p_server_beats_returner significant *** (pos coef)
 
 logit_model_f <- glm(serving_player_won ~ p_server_beats_returner, 
                      data = subset_f_second, family = "binomial")
-summary(logit_model_f) ## not significant
+summary(logit_model_f) ## p_server_beats_returner significant *** (pos coef)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -72,45 +72,45 @@ summary(logit_model_f) ## not significant
 
 logit_model_2_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed, 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_2_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef)
+summary(logit_model_2_m) ## p_server_beats_returner significant *** (pos coef)
 
 logit_model_2_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed, 
                        data = subset_f_second, family = "binomial")
-summary(logit_model_2_f) ## neither significant
+summary(logit_model_2_f) ## p_server_beats_returner significant *** (pos coef)
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add second serve speed ratio
 logit_model_3_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio, 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_3_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef), speed_ratio not significant
+summary(logit_model_3_m) ## p_server_beats_returner significant *** (pos coef), speed_ratio significant *** (pos coef)
 
 logit_model_3_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio, 
                        data = subset_f_second, family = "binomial")
-summary(logit_model_3_f) ## nothing significant
+summary(logit_model_3_f) ## p_server_beats_returner significant *** (pos coef), speed_ratio significant *** (pos coef)
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add score importance
 logit_model_4_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio + importance, 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_4_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef), speed_ratio and importance not significant
+summary(logit_model_4_m) ## p_server_beats_returner significant *** (pos coef), speed_ratio significant *** (pos coef), importance significant *** (pos coef)
 
 logit_model_4_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + speed_ratio + importance,  
                        data = subset_f_second, family = "binomial")
-summary(logit_model_4_f) ## nothing significant
+summary(logit_model_4_f) ## p_server_beats_returner significant *** (pos coef), speed_ratio significant *** (pos coef), importance significant *** (pos coef)
 
 #-----------------------------------------------------------------------------------------------------
 
 ## add location of serve
 logit_model_5_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_5_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef), speed_ratio & importance & serve location not significant
+summary(logit_model_5_m) # p_server_beats_returner significant *** (pos coef), speed_ratio significant *** (pos coef), importance significant *** (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
 logit_model_5_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_second, family = "binomial")
-summary(logit_model_5_f) ## nothing significant
+summary(logit_model_5_f) # p_server_beats_returner significant *** (pos coef), speed_ratio significant *** (pos coef), importance significant *** (pos coef), Servewidth W ** (pos coef), Servedepth NCTL ** (neg coef)
 
-vif(logit_model_5_m)
+vif(logit_model_5_m) # acceptable, all less than 1.3ish
 vif(logit_model_5_f)
 
 #-----------------------------------------------------------------------------------------------------
@@ -119,34 +119,34 @@ vif(logit_model_5_f)
 
 logit_model_6_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_6_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef)
+summary(logit_model_6_m) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Speed_MPH significant *** (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
 logit_model_6_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_second, family = "binomial")
-summary(logit_model_6_f) ## nothing significant
+summary(logit_model_6_f) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Speed_MPH significant *** (pos coef), Servewidth W ** (pos coef), Servedepth NCTL ** (neg coef)
 
 logit_model_7_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + I(Speed_MPH**2) + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_7_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef)
+summary(logit_model_7_m) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Speed_MPH significant ** (neg coef), Speed_MPH^2 significant *** (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
 logit_model_7_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + Speed_MPH + I(Speed_MPH**2) + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_second, family = "binomial")
-summary(logit_model_7_f) ## nothing significant
+summary(logit_model_7_f) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Servewidth W ** (pos coef), Servedepth NCTL ** (neg coef)
 
 logit_model_8_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(Speed_MPH, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_m_second, family = "binomial")
-summary(logit_model_8_m) ## p_server_beats_returner significant *** (neg coef), ElapsedSeconds significant ** (neg coef)
+summary(logit_model_8_m) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), splines::bs(Speed_MPH, degree = 3, df = 5)5 * (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
 logit_model_8_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(Speed_MPH, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
                        data = subset_f_second, family = "binomial")
-summary(logit_model_8_f) ## nothing significant
+summary(logit_model_8_f) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), splines::bs(Speed_MPH, degree = 3, df = 5)5 ** (pos coef), Servewidth W ** (pos coef), Servedepth NCTL ** (neg coef)
 
 #-----------------------------------------------------------------------------------------------------
 
 ## graph proportion of points won vs. speed_mph
-# Step 1: Bin Speed_MPH into intervals (e.g., 5 mph bins)
+# Step 1: Bin Speed_MPH into intervals
 binned_data <- subset_f_second %>%
   filter(!is.na(Speed_MPH)) %>%
   mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
                                                  ceiling(max(Speed_MPH)),
-                                                 by = 5))) %>%
+                                                 by = 10))) %>%
   group_by(speed_bin) %>%
   summarise(
     avg_speed = mean(Speed_MPH, na.rm = TRUE),
@@ -168,12 +168,12 @@ ggsave("../images/female_second_serve_vs_win.png", bg = "white",
        width = 8, height = 6, units = "in")
 
 ## males
-# Step 1: Bin Speed_MPH into intervals (e.g., 5 mph bins)
+# Step 1: Bin Speed_MPH into intervals
 binned_data <- subset_m_second %>%
   filter(!is.na(Speed_MPH)) %>%
   mutate(speed_bin = cut(Speed_MPH, breaks = seq(floor(min(Speed_MPH)),
                                                  ceiling(max(Speed_MPH)),
-                                                 by = 5))) %>%
+                                                 by = 10))) %>%
   group_by(speed_bin) %>%
   summarise(
     avg_speed = mean(Speed_MPH, na.rm = TRUE),
