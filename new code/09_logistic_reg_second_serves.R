@@ -391,6 +391,8 @@ ggsave("../images/male_spline_second_speed.png", bg = "white", width = 8, height
 
 #-----------------------------------------------------------------------------------------------------
 
+## TODO: graph quadratic for speed_MPH. then, graph splines and quadratics for speed_ratio.
+
 
 
 # player_names <- unique(c(subset_m$player1_name, subset_m$player2_name))
