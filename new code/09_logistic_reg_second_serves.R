@@ -140,6 +140,24 @@ summary(logit_model_8_f) # p_server_beats_returner significant *** (pos coef), i
 
 #-----------------------------------------------------------------------------------------------------
 
+## quadratic and spline on speed_ratio
+logit_model_9_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + I(speed_ratio**2) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_m_second, family = "binomial")
+summary(logit_model_9_m) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), speed_ratio significant ** (neg coef), speed_ratio^2 significant *** (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
+logit_model_9_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + speed_ratio + I(speed_ratio**2) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_f_second, family = "binomial")
+summary(logit_model_9_f) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Servewidth W ** (pos coef), Servedepth NCTL ** (neg coef)
+
+logit_model_10_m <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_m_second, family = "binomial")
+summary(logit_model_10_m) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
+logit_model_10_f <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance + splines::bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth), 
+                       data = subset_f_second, family = "binomial")
+summary(logit_model_10_f) # p_server_beats_returner significant *** (pos coef), importance significant *** (pos coef), Servewidth W *** (pos coef), Servedepth NCTL *** (neg coef)
+
+
+#-----------------------------------------------------------------------------------------------------
+
 # ## graph proportion of points won vs. speed_mph
 # # Step 1: Bin Speed_MPH into intervals
 # binned_data <- subset_f_second %>%
@@ -372,6 +390,7 @@ ggplot(plot_df, aes(x = Speed_MPH, y = Probability, color = Source)) +
 ggsave("../images/male_spline_second_speed.png", bg = "white", width = 8, height = 6, units = "in")
 
 #-----------------------------------------------------------------------------------------------------
+
 
 
 # player_names <- unique(c(subset_m$player1_name, subset_m$player2_name))
