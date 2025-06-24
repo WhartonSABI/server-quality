@@ -165,3 +165,78 @@ plot_histogram(f_first, "f_first", "Females First Serve", "speed_ratio")
 
 plot_histogram(f_second, "f_second", "Females Second Serve", "Speed_MPH")
 plot_histogram(f_second, "f_second", "Females Second Serve", "speed_ratio")
+
+# --- Filtered second-serve subsets where speed_ratio <= 1 ---
+m_second_leq1 <- m_second %>% filter(speed_ratio <= 1)
+f_second_leq1 <- f_second %>% filter(speed_ratio <= 1)
+
+# --- Refit and plot models for filtered male second serves ---
+model_m_second_ratio_leq1 <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
+                                   bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
+                                 data = m_second_leq1, family = "binomial")
+assign("m_second_spline_ratio_leq1", model_m_second_ratio_leq1, envir = .GlobalEnv)
+
+plot_spline_model(m_second_leq1, model_m_second_ratio_leq1, "speed_ratio",
+                  title = "Spline vs. Empirical (Speed Ratio ≤ 1) — Males Second Serve",
+                  save_path = "../images/us_m_second_spline_ratio_leq1.png")
+
+# --- Refit and plot models for filtered female second serves ---
+model_f_second_ratio_leq1 <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
+                                   bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
+                                 data = f_second_leq1, family = "binomial")
+assign("f_second_spline_ratio_leq1", model_f_second_ratio_leq1, envir = .GlobalEnv)
+
+plot_spline_model(f_second_leq1, model_f_second_ratio_leq1, "speed_ratio",
+                  title = "Spline vs. Empirical (Speed Ratio ≤ 1) — Females Second Serve",
+                  save_path = "../images/us_f_second_spline_ratio_leq1.png")
+
+# --- Optionally: print summaries ---
+cat("\n==============================\n")
+cat("Model Summary: m_second_spline_ratio_leq1\n")
+cat("==============================\n")
+print(summary(m_second_spline_ratio_leq1))
+
+cat("\n==============================\n")
+cat("Model Summary: f_second_spline_ratio_leq1\n")
+cat("==============================\n")
+print(summary(f_second_spline_ratio_leq1))
+
+# --- Trimmed second serve data: keep only middle 90% of speed_ratio ---
+get_middle_90 <- function(df) {
+  quantiles <- quantile(df$speed_ratio, probs = c(0.05, 0.95), na.rm = TRUE)
+  df %>% filter(speed_ratio >= quantiles[1], speed_ratio <= quantiles[2])
+}
+
+m_second_trimmed <- get_middle_90(m_second)
+f_second_trimmed <- get_middle_90(f_second)
+
+# --- Refit and plot model for trimmed male second serves ---
+model_m_second_ratio_trimmed <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
+                                      bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
+                                    data = m_second_trimmed, family = "binomial")
+assign("m_second_spline_ratio_trimmed", model_m_second_ratio_trimmed, envir = .GlobalEnv)
+
+plot_spline_model(m_second_trimmed, model_m_second_ratio_trimmed, "speed_ratio",
+                  title = "Spline vs. Empirical (Middle 90% Speed Ratio) — Males Second Serve",
+                  save_path = "../images/us_m_second_spline_ratio_trimmed.png")
+
+# --- Refit and plot model for trimmed female second serves ---
+model_f_second_ratio_trimmed <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
+                                      bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
+                                    data = f_second_trimmed, family = "binomial")
+assign("f_second_spline_ratio_trimmed", model_f_second_ratio_trimmed, envir = .GlobalEnv)
+
+plot_spline_model(f_second_trimmed, model_f_second_ratio_trimmed, "speed_ratio",
+                  title = "Spline vs. Empirical (Middle 90% Speed Ratio) — Females Second Serve",
+                  save_path = "../images/us_f_second_spline_ratio_trimmed.png")
+
+# --- Optionally: print summaries ---
+cat("\n==============================\n")
+cat("Model Summary: m_second_spline_ratio_trimmed\n")
+cat("==============================\n")
+print(summary(m_second_spline_ratio_trimmed))
+
+cat("\n==============================\n")
+cat("Model Summary: f_second_spline_ratio_trimmed\n")
+cat("==============================\n")
+print(summary(f_second_spline_ratio_trimmed))
