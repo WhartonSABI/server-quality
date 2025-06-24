@@ -111,6 +111,21 @@ run_spline_group(m_second, "m_second", "Males Second Serve")
 run_spline_group(f_first, "f_first", "Females First Serve")
 run_spline_group(f_second, "f_second", "Females Second Serve")
 
-# --- print model summaries ---
-summary(m_first_spline_speed)
-summary(m_second_spline_ratio)
+# --- Print all Wimbledon model summaries ---
+wimbledon_model_names <- c(
+  "m_first_spline_speed",
+  "m_first_spline_ratio",
+  "m_second_spline_speed",
+  "m_second_spline_ratio",
+  "f_first_spline_speed",
+  "f_first_spline_ratio",
+  "f_second_spline_speed",
+  "f_second_spline_ratio"
+)
+
+for (model_name in wimbledon_model_names) {
+  cat("\n==============================\n")
+  cat("Model Summary:", model_name, "\n")
+  cat("==============================\n")
+  print(summary(get(model_name)))
+}
