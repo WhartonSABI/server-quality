@@ -241,152 +241,181 @@ cat("Model Summary: f_second_spline_ratio_trimmed\n")
 cat("==============================\n")
 print(summary(f_second_spline_ratio_trimmed))
 
-# --- more detailed analysis of second serves ---
-
-# For males:
-m_second <- subset_m %>% filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(Speed_MPH))
-
-# Fit a smooth model
-model_m_second <- glm(serving_player_won ~ bs(Speed_MPH, degree = 3, df = 5),
-                      data = m_second, family = "binomial")
-
-# Predict win prob across a grid of speeds
-speed_vals_m <- seq(min(m_second$Speed_MPH, na.rm = TRUE),
-                    max(m_second$Speed_MPH, na.rm = TRUE), length.out = 200)
-
-spline_basis_m <- as.data.frame(bs(speed_vals_m, degree = 3, df = 5))
-
-# Make predictions
-pred_matrix_m <- model.matrix(~ bs(Speed_MPH, degree = 3, df = 5),
-                              data = data.frame(Speed_MPH = speed_vals_m))
-pred_probs_m <- plogis(pred_matrix_m %*% coef(model_m_second))
-
-# Find max win probability and corresponding speed
-max_index_m <- which.max(pred_probs_m)
-max_speed_m <- speed_vals_m[max_index_m]
-max_prob_m <- pred_probs_m[max_index_m]
-
-cat("Male second serves — speed with highest P(win):\n")
-cat("Speed (MPH):", round(max_speed_m, 2), "\n")
-cat("Predicted win probability:", round(max_prob_m, 4), "\n")
-
-# For females:
-f_second <- subset_f %>% filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(Speed_MPH))
-
-model_f_second <- glm(serving_player_won ~ bs(Speed_MPH, degree = 3, df = 5),
-                      data = f_second, family = "binomial")
-
-speed_vals_f <- seq(min(f_second$Speed_MPH, na.rm = TRUE),
-                    max(f_second$Speed_MPH, na.rm = TRUE), length.out = 200)
-
-pred_matrix_f <- model.matrix(~ bs(Speed_MPH, degree = 3, df = 5),
-                              data = data.frame(Speed_MPH = speed_vals_f))
-pred_probs_f <- plogis(pred_matrix_f %*% coef(model_f_second))
-
-max_index_f <- which.max(pred_probs_f)
-max_speed_f <- speed_vals_f[max_index_f]
-max_prob_f <- pred_probs_f[max_index_f]
-
-cat("Female second serves — speed with highest P(win):\n")
-cat("Speed (MPH):", round(max_speed_f, 2), "\n")
-cat("Predicted win probability:", round(max_prob_f, 4), "\n")
-
-#PLOTS
+# --- More-detailed analysis of second serves (weighted) -----------------
 
 plot_win_prob_simple <- function(df,
-                                 title_text = "P(win) vs. Second-Serve Speed (MPH)",
-                                 save_path = NULL   # <- give a path or leave NULL
-) {
-  library(splines)
-  library(ggplot2)
-  library(dplyr)
+                                 title_text = "P(win) vs. Second-Serve Speed Ratio",
+                                 save_path  = NULL) {
   
-  ## 1  Prep data ---------------------------------------------------------------
-  df <- df %>%
-    filter(ServeNumber == 2,
-           !is.na(serving_player_won),
-           !is.na(Speed_MPH)) %>%
-    as.data.frame()
+  # 1  Add weights & filter ----------------------------------------------------
+  df <- df %>% 
+    filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(speed_ratio)) %>% 
+    mutate(server = if_else(PointServer == 1, player1_name, player2_name)) %>% 
+    add_count(server, name = "n_points") %>% 
+    mutate(weight = 1 / n_points)
   
-  ## 2  Fit spline model --------------------------------------------------------
-  spline_mod <- glm(serving_player_won ~ bs(Speed_MPH, df = 5),
-                    data = df, family = "binomial")
+  # 2  Weighted spline fit -----------------------------------------------------
+  spline_mod <- glm(serving_player_won ~ bs(speed_ratio, df = 5),
+                    data    = df,
+                    family  = "binomial",
+                    weights = weight)
   
-  speed_grid  <- seq(min(df$Speed_MPH), max(df$Speed_MPH), length.out = 200)
-  design_mat  <- model.matrix(~ bs(Speed_MPH, df = 5),
-                              data = data.frame(Speed_MPH = speed_grid))
-  pred_probs  <- plogis(design_mat %*% coef(spline_mod))
+  speed_grid <- seq(min(df$speed_ratio), max(df$speed_ratio), length.out = 200)
+  design_mat <- model.matrix(~ bs(speed_ratio, df = 5),
+                             data = data.frame(speed_ratio = speed_grid))
+  pred_probs <- plogis(design_mat %*% coef(spline_mod))
   
-  spline_df <- data.frame(
-    Speed       = speed_grid,
-    Probability = pred_probs,
-    Source      = "Spline Prediction"
-  )
-  max_point <- spline_df[which.max(spline_df$Probability), ]
+  spline_df <- tibble(Speed = speed_grid,
+                      Probability = pred_probs,
+                      Source = "Spline Prediction")
+  max_pt <- slice_max(spline_df, Probability, n = 1)
   
-  ## 3  Empirical bins ----------------------------------------------------------
-  empirical_df <- df %>%
-    mutate(speed_bin = cut(Speed_MPH,
-                           breaks = seq(floor(min(Speed_MPH)),
-                                        ceiling(max(Speed_MPH)),
-                                        by = 5))) %>%
-    group_by(speed_bin) %>%
+  # 3  Weighted empirical bins -------------------------------------------------
+  empirical_df <- df %>% 
+    mutate(speed_bin = cut(speed_ratio,
+                           breaks = seq(floor(min(speed_ratio)),
+                                        ceiling(max(speed_ratio)), by = 0.025))) %>% 
+    group_by(speed_bin) %>% 
     summarise(
-      Speed       = mean(Speed_MPH, na.rm = TRUE),
-      Probability = mean(serving_player_won == 1, na.rm = TRUE),
-      .groups     = "drop"
-    ) %>%
-    mutate(Source = "Empirical Win Rate")
+      Speed       = weighted.mean(speed_ratio, w = weight, na.rm = TRUE),
+      Probability = weighted.mean(serving_player_won == 1, w = weight, na.rm = TRUE),
+      .groups     = "drop") %>% 
+    mutate(Source = "Empirical Win Rate (Weighted)")
   
-  ## 4  Combine for plotting ----------------------------------------------------
+  # 4  Plot --------------------------------------------------------------------
   plot_df <- bind_rows(spline_df, empirical_df)
   
-  p <- ggplot(plot_df, aes(x = Speed, y = Probability, colour = Source)) +
-    geom_line(data = subset(plot_df, Source == "Spline Prediction"),
-              size = 1.2) +
-    geom_point(data = subset(plot_df, Source == "Empirical Win Rate"),
-               size = 2) +
-    geom_point(data = max_point,
-               aes(x = Speed, y = Probability),
-               colour = "blue", shape = 17, size = 3, show.legend = FALSE) +
-    geom_text(data = max_point,
-              aes(label = paste0("Max: ", round(Speed, 1), " MPH")),
-              vjust = -1.2, colour = "blue", fontface = "bold",
-              show.legend = FALSE) +
-    labs(
-      title = title_text,
-      x     = "Second-Serve Speed (MPH)",
-      y     = "P(Server Wins Point)",
-      colour = NULL      # nicer legend title
-    ) +
-    scale_colour_manual(values = c("Empirical Win Rate"  = "black",
-                                   "Spline Prediction"    = "red")) +
+  p <- ggplot(plot_df, aes(Speed, Probability, colour = Source)) +
+    geom_line(data = subset(plot_df, Source == "Spline Prediction"), size = 1.2) +
+    geom_point(data = subset(plot_df, Source == "Empirical Win Rate (Weighted)"), size = 2) +
+    geom_point(data = max_pt, colour = "blue", shape = 17, size = 3, show.legend = FALSE) +
+    geom_text(data = max_pt, aes(label = paste0("Max: ", round(Speed, 2))),
+              vjust = -1.2, colour = "blue", fontface = "bold", show.legend = FALSE) +
+    labs(title = title_text,
+         x     = "Second-Serve Speed Ratio",
+         y     = "P(Server Wins Point)",
+         colour = NULL) +
+    scale_colour_manual(values = c("Empirical Win Rate (Weighted)" = "black",
+                                   "Spline Prediction"             = "red")) +
     theme_minimal()
   
-  ## 5  Save if asked -----------------------------------------------------------
-  if (!is.null(save_path)) {
-    ggsave(filename = save_path, plot = p,
-           width = 8, height = 6, units = "in", bg = "white")
-  }
+  if (!is.null(save_path))
+    ggsave(save_path, p, width = 8, height = 6, units = "in", bg = "white")
   
-  return(p)
+  invisible(p)
 }
 
-# Draw in Viewer pane only
-print(
-  plot_win_prob_simple(subset_m,
-                       "Male Second Serves: P(win) vs Speed")
-)
+# Viewer only
+plot_win_prob_simple(subset_m,
+                     "Male Second Serves: P(win) vs Speed Ratio")
 
-# Draw *and* save
-print(
-  plot_win_prob_simple(subset_f,
-                       "Female Second Serves: P(win) vs Speed",
-                       save_path = "../images/wimbledon_female_second_speed.png")
-)
+# Viewer + save
+plot_win_prob_simple(subset_f,
+                     "Female Second Serves: P(win) vs Speed Ratio",
+                     save_path = "../images/wimbledon_female_second_speed_ratio.png")
 
-print(
-  plot_win_prob_simple(subset_m,
-                       "Male Second Serves: P(win) vs Speed",
-                       save_path = "../images/wimbledon_male_second_speed.png")
-)
+plot_win_prob_simple(subset_m,
+                     "Male Second Serves: P(win) vs Speed Ratio",
+                     save_path = "../images/wimbledon_male_second_speed_ratio.png")
+
+## middle 90% of data
+m_second_trimmed <- get_middle_90(m_second)
+f_second_trimmed <- get_middle_90(f_second)
+
+plot_win_prob_simple(m_second_trimmed,
+                     "Male Second Serves: P(win) vs Speed Ratio (Middle 90%)",
+                     save_path = "../images/wimbledon_male_second_ratio_middle.png")
+
+plot_win_prob_simple(f_second_trimmed,
+                     "Female Second Serves: P(win) vs Speed Ratio (Middle 90%)",
+                     save_path = "../images/wimbledon_female_second_ratio_middle.png")
+
+##### speed MPH
+
+plot_win_prob_speed <- function(df,
+                                title_text = "P(win) vs. Second-Serve Speed",
+                                save_path  = NULL) {
+  
+  # 1  Add weights & filter ----------------------------------------------------
+  df <- df %>% 
+    filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(Speed_MPH)) %>% 
+    mutate(server = if_else(PointServer == 1, player1_name, player2_name)) %>% 
+    add_count(server, name = "n_points") %>% 
+    mutate(weight = 1 / n_points)
+  
+  # 2  Weighted spline fit -----------------------------------------------------
+  spline_mod <- glm(serving_player_won ~ bs(Speed_MPH, df = 5),
+                    data    = df,
+                    family  = "binomial",
+                    weights = weight)
+  
+  speed_grid <- seq(min(df$Speed_MPH), max(df$Speed_MPH), length.out = 200)
+  design_mat <- model.matrix(~ bs(Speed_MPH, df = 5),
+                             data = data.frame(Speed_MPH = speed_grid))
+  pred_probs <- plogis(design_mat %*% coef(spline_mod))
+  
+  spline_df <- tibble(Speed = speed_grid,
+                      Probability = pred_probs,
+                      Source = "Spline Prediction")
+  max_pt <- slice_max(spline_df, Probability, n = 1)
+  
+  # 3  Weighted empirical bins -------------------------------------------------
+  empirical_df <- df %>% 
+    mutate(speed_bin = cut(Speed_MPH,
+                           breaks = seq(floor(min(Speed_MPH)),
+                                        ceiling(max(Speed_MPH)), by = 5))) %>% 
+    group_by(speed_bin) %>% 
+    summarise(
+      Speed       = weighted.mean(Speed_MPH, w = weight, na.rm = TRUE),
+      Probability = weighted.mean(serving_player_won == 1, w = weight, na.rm = TRUE),
+      .groups     = "drop") %>% 
+    mutate(Source = "Empirical Win Rate (Weighted)")
+  
+  # 4  Plot --------------------------------------------------------------------
+  plot_df <- bind_rows(spline_df, empirical_df)
+  
+  p <- ggplot(plot_df, aes(Speed, Probability, colour = Source)) +
+    geom_line(data = subset(plot_df, Source == "Spline Prediction"), size = 1.2) +
+    geom_point(data = subset(plot_df, Source == "Empirical Win Rate (Weighted)"), size = 2) +
+    geom_point(data = max_pt, colour = "blue", shape = 17, size = 3, show.legend = FALSE) +
+    geom_text(data = max_pt, aes(label = paste0("Max: ", round(Speed, 2))),
+              vjust = -1.2, colour = "blue", fontface = "bold", show.legend = FALSE) +
+    labs(title = title_text,
+         x     = "Second-Serve Speed (MPH)",
+         y     = "P(Server Wins Point)",
+         colour = NULL) +
+    scale_colour_manual(values = c("Empirical Win Rate (Weighted)" = "black",
+                                   "Spline Prediction"             = "red")) +
+    theme_minimal()
+  
+  if (!is.null(save_path))
+    ggsave(save_path, p, width = 8, height = 6, units = "in", bg = "white")
+  
+  invisible(p)
+}
+
+# Viewer only
+plot_win_prob_speed(subset_m,
+                    "Male Second Serves: P(win) vs Speed (MPH)")
+
+# Viewer + save
+plot_win_prob_speed(subset_f,
+                    "Female Second Serves: P(win) vs Speed (MPH)",
+                    save_path = "../images/wimbledon_female_second_speed_mph.png")
+
+plot_win_prob_speed(subset_m,
+                    "Male Second Serves: P(win) vs Speed (MPH)",
+                    save_path = "../images/wimbledon_male_second_speed_mph.png")
+
+## middle 90% of data
+m_second_trimmed <- get_middle_90(m_second)
+f_second_trimmed <- get_middle_90(f_second)
+
+plot_win_prob_speed(m_second_trimmed,
+                    "Male Second Serves: P(win) vs Speed (MPH) (Middle 90%)",
+                    save_path = "../images/wimbledon_male_second_mph_middle.png")
+
+plot_win_prob_speed(f_second_trimmed,
+                    "Female Second Serves: P(win) vs Speed (MPH) (Middle 90%)",
+                    save_path = "../images/wimbledon_female_second_mph_middle.png")
+
