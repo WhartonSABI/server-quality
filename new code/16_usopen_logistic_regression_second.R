@@ -5,8 +5,9 @@ library(data.table)
 library(ggplot2)
 library(car)
 library(splines)
+library(dplyr)
 
-# --- Load US Open data ---
+# --- Load data ---
 subset_m <- fread("../data/usopen_subset_m.csv")
 subset_f <- fread("../data/usopen_subset_f.csv")
 
@@ -86,33 +87,33 @@ run_spline_group <- function(df, group_id, group_name) {
                        bs(Speed_MPH, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
                      data = df, family = "binomial")
   
-  assign(paste0("us_", group_id, "_spline_speed"), model_speed, envir = .GlobalEnv)
+  # Save to global env with name
+  assign(paste0(group_id, "_spline_speed"), model_speed, envir = .GlobalEnv)
   
   plot_spline_model(df, model_speed, "Speed_MPH",
-                    title = paste("US Open — Spline vs. Empirical (Speed MPH) —", group_name),
-                    save_path = paste0("../images/us_", group_id, "_spline_speed.png"))
+                    title = paste("Spline vs. Empirical (Speed MPH) —", group_name),
+                    save_path = paste0("../images/", group_id, "_spline_speed.png"))
   
   # Fit spline model with speed_ratio
   model_ratio <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
                        bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
                      data = df, family = "binomial")
   
-  assign(paste0("us_", group_id, "_spline_ratio"), model_ratio, envir = .GlobalEnv)
+  assign(paste0(group_id, "_spline_ratio"), model_ratio, envir = .GlobalEnv)
   
   plot_spline_model(df, model_ratio, "speed_ratio",
-                    title = paste("US Open — Spline vs. Empirical (Speed Ratio) —", group_name),
-                    save_path = paste0("../images/us_", group_id, "_spline_ratio.png"))
+                    title = paste("Spline vs. Empirical (Speed Ratio) —", group_name),
+                    save_path = paste0("../images/", group_id, "_spline_ratio.png"))
 }
 
 # --- Run all 4 groups ---
-run_spline_group(m_first, "m_first", "Males First Serve")
-run_spline_group(m_second, "m_second", "Males Second Serve")
-run_spline_group(f_first, "f_first", "Females First Serve")
-run_spline_group(f_second, "f_second", "Females Second Serve")
+run_spline_group(m_first, "us_m_first", "Males First Serve")
+run_spline_group(m_second, "us_m_second", "Males Second Serve")
+run_spline_group(f_first, "us_f_first", "Females First Serve")
+run_spline_group(f_second, "us_f_second", "Females Second Serve")
 
-# --- model summaries ---
-
-us_model_names <- c(
+# --- Print all Wimbledon model summaries ---
+usopen_model_names <- c(
   "us_m_first_spline_speed",
   "us_m_first_spline_ratio",
   "us_m_second_spline_speed",
@@ -123,8 +124,7 @@ us_model_names <- c(
   "us_f_second_spline_ratio"
 )
 
-# Loop through and print summaries
-for (model_name in us_model_names) {
+for (model_name in usopen_model_names) {
   cat("\n==============================\n")
   cat("Model Summary:", model_name, "\n")
   cat("==============================\n")
@@ -149,7 +149,7 @@ plot_histogram <- function(df, group_id, group_name, var) {
     ) +
     theme_minimal()
   
-  ggsave(paste0("../images/us_", group_id, "_hist_", tolower(var), ".png"),
+  ggsave(paste0("../images/", group_id, "_hist_", tolower(var), ".png"),
          width = 8, height = 6, units = "in", bg = "white")
 }
 
@@ -240,3 +240,92 @@ cat("\n==============================\n")
 cat("Model Summary: f_second_spline_ratio_trimmed\n")
 cat("==============================\n")
 print(summary(f_second_spline_ratio_trimmed))
+
+# --- More-detailed analysis of second serves (weighted) -----------------
+
+plot_win_prob_simple <- function(df,
+                                 title_text = "P(win) vs. Second-Serve Speed Ratio",
+                                 save_path  = NULL) {
+  
+  # 1  Add weights & filter ----------------------------------------------------
+  df <- df %>% 
+    filter(ServeNumber == 2, !is.na(serving_player_won), !is.na(speed_ratio)) %>% 
+    mutate(server = if_else(PointServer == 1, player1_name, player2_name)) %>% 
+    add_count(server, name = "n_points") %>% 
+    mutate(weight = 1 / n_points)
+  
+  # 2  Weighted spline fit -----------------------------------------------------
+  spline_mod <- glm(serving_player_won ~ bs(speed_ratio, df = 5),
+                    data    = df,
+                    family  = "binomial",
+                    weights = weight)
+  
+  speed_grid <- seq(min(df$speed_ratio), max(df$speed_ratio), length.out = 200)
+  design_mat <- model.matrix(~ bs(speed_ratio, df = 5),
+                             data = data.frame(speed_ratio = speed_grid))
+  pred_probs <- plogis(design_mat %*% coef(spline_mod))
+  
+  spline_df <- tibble(Speed = speed_grid,
+                      Probability = pred_probs,
+                      Source = "Spline Prediction")
+  max_pt <- slice_max(spline_df, Probability, n = 1)
+  
+  # 3  Weighted empirical bins -------------------------------------------------
+  empirical_df <- df %>% 
+    mutate(speed_bin = cut(speed_ratio,
+                           breaks = seq(floor(min(speed_ratio)),
+                                        ceiling(max(speed_ratio)), by = 0.025))) %>% 
+    group_by(speed_bin) %>% 
+    summarise(
+      Speed       = weighted.mean(speed_ratio, w = weight, na.rm = TRUE),
+      Probability = weighted.mean(serving_player_won == 1, w = weight, na.rm = TRUE),
+      .groups     = "drop") %>% 
+    mutate(Source = "Empirical Win Rate (Weighted)")
+  
+  # 4  Plot --------------------------------------------------------------------
+  plot_df <- bind_rows(spline_df, empirical_df)
+  
+  p <- ggplot(plot_df, aes(Speed, Probability, colour = Source)) +
+    geom_line(data = subset(plot_df, Source == "Spline Prediction"), size = 1.2) +
+    geom_point(data = subset(plot_df, Source == "Empirical Win Rate (Weighted)"), size = 2) +
+    geom_point(data = max_pt, colour = "blue", shape = 17, size = 3, show.legend = FALSE) +
+    geom_text(data = max_pt, aes(label = paste0("Max: ", round(Speed, 2))),
+              vjust = -1.2, colour = "blue", fontface = "bold", show.legend = FALSE) +
+    labs(title = title_text,
+         x     = "Second-Serve Speed Ratio",
+         y     = "P(Server Wins Point)",
+         colour = NULL) +
+    scale_colour_manual(values = c("Empirical Win Rate (Weighted)" = "black",
+                                   "Spline Prediction"             = "red")) +
+    theme_minimal()
+  
+  if (!is.null(save_path))
+    ggsave(save_path, p, width = 8, height = 6, units = "in", bg = "white")
+  
+  invisible(p)
+}
+
+# Viewer only
+plot_win_prob_simple(subset_m,
+                     "Male Second Serves: P(win) vs Speed Ratio")
+
+# Viewer + save
+plot_win_prob_simple(subset_f,
+                     "Female Second Serves: P(win) vs Speed Ratio",
+                     save_path = "../images/usopen_female_second_speed_ratio.png")
+
+plot_win_prob_simple(subset_m,
+                     "Male Second Serves: P(win) vs Speed Ratio",
+                     save_path = "../images/usopen_male_second_speed_ratio.png")
+
+## middle 90% of data
+m_second_trimmed <- get_middle_90(m_second)
+f_second_trimmed <- get_middle_90(f_second)
+
+plot_win_prob_simple(m_second_trimmed,
+                     "Male Second Serves: P(win) vs Speed Ratio (Middle 90%)",
+                     save_path = "../images/usopen_male_second_ratio_middle.png")
+
+plot_win_prob_simple(f_second_trimmed,
+                     "Female Second Serves: P(win) vs Speed Ratio (Middle 90%)",
+                     save_path = "../images/usopen_female_second_ratio_middle.png")
