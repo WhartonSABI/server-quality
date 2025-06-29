@@ -584,7 +584,7 @@ subset_2023_f <- subset_2023_f %>%
 #   ))
 
 write.csv(subset_2023_m, "../data/usopen_subset_2023_m.csv", row.names = FALSE)
-write.csv(subset_2024_f, "../data/usopen_subset_2023_f.csv", row.names = FALSE)
+write.csv(subset_2023_f, "../data/usopen_subset_2023_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
