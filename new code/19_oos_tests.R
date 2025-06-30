@@ -120,3 +120,5 @@ oos_results <- map_dfr(1:nrow(eval_grid), function(i) {
 })
 
 print(oos_results, n = Inf)
+
+write.csv(oos_results, "oos_results_all.csv")
