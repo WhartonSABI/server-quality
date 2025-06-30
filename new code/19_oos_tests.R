@@ -1,12 +1,12 @@
 rm(list=ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m <- "../data/wimbledon_subset_m.csv"
+path_train_w_m <- "../data/wimbledon_subset_m.csv" # 2021-2024 data, in the "data" folder
 path_train_w_f <- "../data/wimbledon_subset_f.csv"
 path_train_u_m <- "../data/usopen_subset_m.csv"
 path_train_u_f <- "../data/usopen_subset_f.csv"
 
-path_oos_w_m   <- "oos_test_wimbledon_subset_m.csv"
+path_oos_w_m   <- "oos_test_wimbledon_subset_m.csv" # 2018-2019 data, in the "new_code" folder
 path_oos_w_f   <- "oos_test_wimbledon_subset_f.csv"
 path_oos_u_m   <- "oos_test_usopen_subset_m.csv"
 path_oos_u_f   <- "oos_test_usopen_subset_f.csv"
