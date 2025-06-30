@@ -83,7 +83,7 @@ results_df <- map_dfr(names(groups), function(g) {
 
 print(results_df)
 
-write.csv(results_df, "wimbledon_spline_insample_test.csv", row.names = FALSE)
+write.csv(results_df, "results_wimbledon_spline_insample_test.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------
 #-----------------------------------------------------------------------
@@ -122,4 +122,4 @@ results_df <- map_dfr(names(groups), function(g) {
 })
 
 print(results_df)
-write.csv(results_df, "wimbledon_linear_insample_test.csv", row.names = FALSE)
+write.csv(results_df, "results_wimbledon_linear_insample_test.csv", row.names = FALSE)
