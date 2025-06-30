@@ -8,8 +8,8 @@ library(splines)
 library(dplyr)
 
 # --- Load data ---
-subset_m <- fread("../data/wimbledon_subset_m.csv")
-subset_f <- fread("../data/wimbledon_subset_f.csv")
+subset_m <- fread("wimbledon_subset_m.csv")
+subset_f <- fread("wimbledon_subset_f.csv")
 
 # --- Helper function to plot spline model + empirical ---
 plot_spline_model <- function(df, model, speed_col, title, save_path) {
