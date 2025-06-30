@@ -76,12 +76,14 @@ names(wimbledon_2023_male)
 subset_2023_m <- wimbledon_2023_male %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 subset_2023_f <- wimbledon_2023_female %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.

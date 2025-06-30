@@ -191,12 +191,14 @@ usopen_2024_female <- add_speed_ratio_column(usopen_2024_female)
 subset_2024_m <- usopen_2024_male %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 subset_2024_f <- usopen_2024_female %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.
@@ -406,12 +408,14 @@ usopen_2023_female <- add_speed_ratio_column(usopen_2023_female)
 subset_2023_m <- usopen_2023_male %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 subset_2023_f <- usopen_2023_female %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.
@@ -580,7 +584,7 @@ subset_2023_f <- subset_2023_f %>%
 #   ))
 
 write.csv(subset_2023_m, "../data/usopen_subset_2023_m.csv", row.names = FALSE)
-write.csv(subset_2024_f, "../data/usopen_subset_2023_f.csv", row.names = FALSE)
+write.csv(subset_2023_f, "../data/usopen_subset_2023_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------
@@ -621,12 +625,14 @@ usopen_2022_female <- add_speed_ratio_column(usopen_2022_female)
 subset_2022_m <- usopen_2022_male %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 subset_2022_f <- usopen_2022_female %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.
@@ -835,12 +841,14 @@ usopen_2021_female <- add_speed_ratio_column(usopen_2021_female)
 subset_2021_m <- usopen_2021_male %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 subset_2021_f <- usopen_2021_female %>% # to make it easier for us to look through relevant columns
   select(match_id, slam, year, ElapsedTime, SetNo, GameNo, PointNumber, player1, player2, Speed_MPH, ServeNumber, PointServer, PointWinner, 
          ServeWidth, ServeDepth, RallyCount, P1DistanceRun, P2DistanceRun, P1Score, P2Score, state, PointWinner, GameWinner,
-         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance)
+         RallyCount, serving_player_won, speed_ratio, P1BreakPoint, P2BreakPoint, P1GamesWon, P2GamesWon, importance,
+         P1Ace, P2Ace, P1DoubleFault, P2DoubleFault)
 
 # add new column for player1_name being last name (which includes every word in player1 except for 
 # the first word) followed by their first initial, then a period.

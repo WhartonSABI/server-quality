@@ -19,6 +19,43 @@ colSums(is.na(subset_f))
 
 #-----------------------------------------------------------------------------------------------------
 
+# Convert ELO to logistic (Bradley-Terry scale)
+subset_m[, welo_p1_bt := 0.0057565 * player1_avg_welo]
+subset_m[, welo_p2_bt := 0.0057565 * player2_avg_welo]
+
+## male
+subset_m <- subset_m %>%
+  mutate(p_server_beats_returner <- ifelse(PointServer == 1,
+                                           1 / (1 + exp(welo_p2_bt - welo_p1_bt)),
+                                           1 / (1 + exp(welo_p1_bt - welo_p2_bt))))
+
+# rename column in subset_m
+setnames(subset_m, old = c("... <- NULL"),
+         new = c("p_server_beats_returner"))
+
+write.csv(subset_m, "../data/wimbledon_subset_m.csv", row.names = FALSE)
+
+#-----------------------------------------------------------------------------------------------------
+
+# Convert ELO to logistic (Bradley-Terry scale)
+subset_f[, welo_p1_bt := 0.0057565 * player1_avg_welo]
+subset_f[, welo_p2_bt := 0.0057565 * player2_avg_welo]
+
+## female
+subset_f <- subset_f %>%
+  mutate(p_server_beats_returner <- ifelse(PointServer == 1,
+                                           1 / (1 + exp(welo_p1_bt - welo_p2_bt)),
+                                           1 / (1 + exp(welo_p2_bt - welo_p1_bt))))
+
+# rename column in subset_f
+setnames(subset_f, old = c("... <- NULL"),
+         new = c("p_server_beats_returner"))
+
+write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
+
+
+#-----------------------------------------------------------------------------------------------------
+
 # fix large gaps in elapsed time (male)
 subset_m <- subset_m %>%
   arrange(match_id, PointNumber) %>%
@@ -98,3 +135,4 @@ colSums(is.na(subset_f))
 write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
+
