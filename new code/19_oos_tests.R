@@ -1,10 +1,10 @@
 rm(list=ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m <- "../data/wimbledon_subset_m.csv" # 2021-2024 data, in the "data" folder
-path_train_w_f <- "../data/wimbledon_subset_f.csv"
-path_train_u_m <- "../data/usopen_subset_m.csv"
-path_train_u_f <- "../data/usopen_subset_f.csv"
+path_train_w_m <- "wimbledon_subset_m.csv" # 2021-2024 data, in the "data" folder
+path_train_w_f <- "wimbledon_subset_f.csv"
+path_train_u_m <- "usopen_subset_m.csv"
+path_train_u_f <- "usopen_subset_f.csv"
 
 path_oos_w_m   <- "oos_test_wimbledon_subset_m.csv" # 2018-2019 data, in the "new_code" folder
 path_oos_w_f   <- "oos_test_wimbledon_subset_f.csv"
@@ -41,6 +41,39 @@ add_elapsed_fixed <- function(df) {
 }
 train_sets <- map(train_sets, add_elapsed_fixed)
 oos_sets   <- map(oos_sets,   add_elapsed_fixed)
+
+# ── 1. variables to standardise ────────────────────────────────────────
+num_vars <- c("Speed_MPH",
+              "speed_ratio",
+              "importance",
+              "ElapsedSeconds_fixed",
+              "p_server_beats_returner")
+
+std_in_place <- function(df, vars) {
+  present <- intersect(vars, names(df))          # only those that exist
+  df <- df %>%
+    mutate(across(all_of(present),
+                  ~ as.numeric(scale(., center = TRUE, scale = TRUE))))
+  df
+}
+
+train_sets <- map(train_sets, std_in_place, vars = num_vars)
+oos_sets   <- map(oos_sets,   std_in_place, vars = num_vars)
+
+library(fs)          # for dir_create()
+dir_create("scaled") # put everything in a new folder called “scaled”
+
+# helper ---------------------------------------------------------------
+save_scaled <- function(lst, suffix) {
+  purrr::iwalk(lst, function(df, nm) {
+    fn <- file.path("scaled", paste0(nm, "_", suffix, ".csv"))
+    data.table::fwrite(df, fn)
+  })
+}
+
+# write files ----------------------------------------------------------
+save_scaled(train_sets, "train_scaled")  # e.g. scaled/wimbledon_m_train_scaled.csv
+save_scaled(oos_sets,   "test_scaled")   # e.g. scaled/usopen_f_test_scaled.csv
 
 ## model formulas
 form_speed <- serving_player_won ~ p_server_beats_returner +
