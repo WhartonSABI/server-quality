@@ -253,6 +253,8 @@ colSums(is.na(wimbledon_2019_matches))
 wimbledon_2019_points <- as.data.table(read.csv("../data/raw_data/2019-wimbledon-points.csv"))
 # names(wimbledon_2019_points)
 colSums(is.na(wimbledon_2019_points))
+# find how many columns in wimbledon_2019_points have P1DoubleFault == 1 or P2DoubleFault == 2
+nrow(wimbledon_2019_points %>% filter(P1DoubleFault == 1 | P2DoubleFault == 1))
 
 # remove all cols with NAs
 wimbledon_2019_matches <- wimbledon_2019_matches %>%
