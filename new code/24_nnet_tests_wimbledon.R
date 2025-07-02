@@ -19,8 +19,8 @@ fast_logloss <- function(truth, prob1, eps = 1e-15) {
 
 ## Scale numeric columns in train & apply same transform to test
 scale_like <- function(train_df, test_df, num_vars) {
-  means <- sapply(train_df[, num_vars], mean)
-  sds   <- sapply(train_df[, num_vars], sd)
+  means <- sapply(train_df[, ..num_vars], mean)
+  sds   <- sapply(train_df[, ..num_vars], sd)
   train_df[, (num_vars) := Map(function(x, m, s) (x - m)/s,
                                .SD, means, sds),
            .SDcols = num_vars]
