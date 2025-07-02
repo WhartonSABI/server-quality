@@ -38,40 +38,32 @@ form_speed <- serving_player_won ~
   importance +
   Speed_MPH 
 
-# 4) pick one slice, e.g. Wimbledon men first serves
-df <- train_sets$wimbledon_m %>%
-  filter(ServeNumber == 1)
+# 4) pick one slice, e.g. Wimbledon men first & second serves and Wimbledon women
+df_m1  <- train_sets$wimbledon_m %>% filter(ServeNumber == 1)
+df_f1  <- train_sets$wimbledon_f %>% filter(ServeNumber == 1)
+df_m2  <- train_sets$wimbledon_m %>% filter(ServeNumber == 2)
+df_f2  <- train_sets$wimbledon_f %>% filter(ServeNumber == 2)
 
-# 5) build design matrix & response
-X <- model.matrix(form_speed, data = df)[, -1]      # drop intercept column
-y <- df$serving_player_won
+Xm1 <- model.matrix(form_speed, data = df_m1)[, -1];  y_m1 <- df_m1$serving_player_won
+Xf1 <- model.matrix(form_speed, data = df_f1)[, -1];  y_f1 <- df_f1$serving_player_won
+Xm2 <- model.matrix(form_speed, data = df_m2)[, -1];  y_m2 <- df_m2$serving_player_won
+Xf2 <- model.matrix(form_speed, data = df_f2)[, -1];  y_f2 <- df_f2$serving_player_won
 
-# 6) fit a probability forest with impurity‐based importances
-rf_mod <- ranger(
-  x           = X,
-  y           = y,
-  probability = TRUE,
-  importance  = "impurity",
-  num.trees   = 500
-)
+rf_mod_m1 <- ranger(x = Xm1, y = y_m1, probability = TRUE, importance = "impurity", num.trees = 500)
+rf_mod_f1 <- ranger(x = Xf1, y = y_f1, probability = TRUE, importance = "impurity", num.trees = 500)
+rf_mod_m2 <- ranger(x = Xm2, y = y_m2, probability = TRUE, importance = "impurity", num.trees = 500)
+rf_mod_f2 <- ranger(x = Xf2, y = y_f2, probability = TRUE, importance = "impurity", num.trees = 500)
 
-# 7) extract importances into a tibble
-imp_df <- enframe(rf_mod$variable.importance, name = "variable", value = "importance") %>%
+# 7) optional: plot one importance
+imp_df <- enframe(rf_mod_m1$variable.importance, name = "variable", value = "importance") %>%
   arrange(desc(importance))
-
-# 8) plot
 ggplot(imp_df, aes(x = reorder(variable, importance), y = importance)) +
-  geom_col() +
-  coord_flip() +
-  labs(
-    title = "RF Variable Importance\nWimbledon Men — First Serve (speed)",
-    x     = NULL,
-    y     = "Importance"
-  ) +
+  geom_col() + coord_flip() +
+  labs(title = "RF Variable Importance\nWimbledon Men — 1st Serve", x = NULL, y = "Importance") +
   theme_minimal()
 
+#################### TEST ####################
 
-#################### TEST
 test_sets <- list(
   wimbledon_m = fread(path_oos_w_m_scaled),
   wimbledon_f = fread(path_oos_w_f_scaled),
@@ -81,53 +73,27 @@ test_sets <- list(
 
 # ensure ElapsedSeconds_fixed exists
 test_sets <- map(test_sets, function(df) {
-  if (!"ElapsedSeconds_fixed" %in% names(df)) {
+  if (!"ElapsedSeconds_fixed" %in% names(df))
     df$ElapsedSeconds_fixed <- df$ElapsedSeconds
-  }
   df
 })
 
-## -------- 6. PREDICT ON WIMBLEDON MEN FIRST SERVES TEST -------
-df_test <- test_sets$wimbledon_m %>%
-  filter(ServeNumber == 1)
+# ─── ACCURACY COMPUTATION FOR ALL FOUR EVENTS ───
 
-X_test <- model.matrix(form_speed, data = df_test)[, -1] %>%
-  as.data.frame()
+compute_acc <- function(model, df) {
+  X <- model.matrix(form_speed, data = df)[, -1] %>% as.data.frame()
+  p <- predict(model, data = X)$predictions[,2]
+  mean((p >= 0.5) == df$serving_player_won)
+}
 
-pred_mat <- predict(rf_mod, data = X_test)$predictions
+# Wimbledon
+cat("Wimbledon Men 1st-serve accuracy:",    round(compute_acc(rf_mod_m1, test_sets$wimbledon_m %>% filter(ServeNumber == 1)), 4), "\n")
+cat("Wimbledon Women 1st-serve accuracy:",  round(compute_acc(rf_mod_f1, test_sets$wimbledon_f %>% filter(ServeNumber == 1)), 4), "\n")
+cat("Wimbledon Men 2nd-serve accuracy:",    round(compute_acc(rf_mod_m2, test_sets$wimbledon_m %>% filter(ServeNumber == 2)), 4), "\n")
+cat("Wimbledon Women 2nd-serve accuracy:",  round(compute_acc(rf_mod_f2, test_sets$wimbledon_f %>% filter(ServeNumber == 2)), 4), "\n")
 
-# column 1 = P(FALSE), column 2 = P(TRUE)
-df_test <- df_test %>%
-  mutate(
-    p_win = pred_mat[, 2]
-  )
-
-## -------- 7. INSPECT PREDICTIONS ---------------------------------
-head(df_test %>% select(ServeNumber, Speed_MPH, serving_player_won, p_win))
-library(dplyr)
-
-df_small <- df_test %>%
-  select(
-    player1,
-    player2,
-    Speed_MPH,
-    PointServer,
-    ServeNumber,
-    serving_player_won,
-    p_win,
-    PointWinner
-  )
-
-
-df_test <- df_test %>%
-  mutate(
-    pred_win = ifelse(p_win >= 0.5, 1L, 0L)
-  )
-
-# 2) compute accuracy as the fraction of correct predictions
-accuracy <- mean(df_test$pred_win == df_test$serving_player_won)
-
-# 3) print it
-print(accuracy)
-
-# 4) plot the distribution of predicted probabilities
+# US Open
+cat("US Open Men 1st-serve accuracy:",      round(compute_acc(rf_mod_m1, test_sets$usopen_m  %>% filter(ServeNumber == 1)), 4), "\n")
+cat("US Open Women 1st-serve accuracy:",    round(compute_acc(rf_mod_f1, test_sets$usopen_f  %>% filter(ServeNumber == 1)), 4), "\n")
+cat("US Open Men 2nd-serve accuracy:",      round(compute_acc(rf_mod_m2, test_sets$usopen_m  %>% filter(ServeNumber == 2)), 4), "\n")
+cat("US Open Women 2nd-serve accuracy:",    round(compute_acc(rf_mod_f2, test_sets$usopen_f  %>% filter(ServeNumber == 2)), 4), "\n")
