@@ -1,15 +1,15 @@
 # rm(list=ls())
 # 
 # ## -------- 0. FILE LOCATIONS -------------------------------------------
-# path_train_w_m_scaled <- "scaled/wimbledon_m_train_scaled.csv" # 2021–2024 data
-# path_train_w_f_scaled <- "scaled/wimbledon_f_train_scaled.csv"
-# path_train_u_m_scaled <- "scaled/usopen_m_train_scaled.csv"
-# path_train_u_f_scaled <- "scaled/usopen_f_train_scaled.csv"
-# 
-# path_oos_w_m_scaled   <- "scaled/wimbledon_m_test_scaled.csv" # 2018–2019 data
-# path_oos_w_f_scaled   <- "scaled/wimbledon_f_test_scaled.csv"
-# path_oos_u_m_scaled   <- "scaled/usopen_m_test_scaled.csv"
-# path_oos_u_f_scaled   <- "scaled/usopen_f_test_scaled.csv"
+path_train_w_m_scaled <- "scaled/wimbledon_m_train_scaled.csv" # 2021–2024 data
+path_train_w_f_scaled <- "scaled/wimbledon_f_train_scaled.csv"
+path_train_u_m_scaled <- "scaled/usopen_m_train_scaled.csv"
+path_train_u_f_scaled <- "scaled/usopen_f_train_scaled.csv"
+
+path_oos_w_m_scaled   <- "scaled/wimbledon_m_test_scaled.csv" # 2018–2019 data
+path_oos_w_f_scaled   <- "scaled/wimbledon_f_test_scaled.csv"
+path_oos_u_m_scaled   <- "scaled/usopen_m_test_scaled.csv"
+path_oos_u_f_scaled   <- "scaled/usopen_f_test_scaled.csv"
 # 
 # library(tidyverse)   # dplyr / readr / ggplot2 / tibble …
 # library(data.table)  # fread
