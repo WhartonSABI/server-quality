@@ -1,0 +1,17 @@
+"","model","dataset","n","accuracy","log_loss"
+"1","wimbledon_m_first_speed","wimbledon_m",16053,0.7464,0.5354
+"2","wimbledon_m_first_ratio","wimbledon_m",16053,0.7464,0.5354
+"3","wimbledon_m_second_speed","wimbledon_m",8043,0.5718,0.6652
+"4","wimbledon_m_second_ratio","wimbledon_m",8043,0.5718,0.6652
+"5","wimbledon_f_first_speed","wimbledon_f",10179,0.6574,0.6229
+"6","wimbledon_f_first_ratio","wimbledon_f",10179,0.6574,0.6229
+"7","wimbledon_f_second_speed","wimbledon_f",5243,0.5482,0.6803
+"8","wimbledon_f_second_ratio","wimbledon_f",5243,0.5482,0.6803
+"9","usopen_m_first_speed","usopen_m",14374,0.7207,0.5675
+"10","usopen_m_first_ratio","usopen_m",14374,0.7207,0.5675
+"11","usopen_m_second_speed","usopen_m",8404,0.5698,0.6724
+"12","usopen_m_second_ratio","usopen_m",8404,0.5698,0.6724
+"13","usopen_f_first_speed","usopen_f",10047,0.6474,0.6243
+"14","usopen_f_first_ratio","usopen_f",10047,0.6474,0.6243
+"15","usopen_f_second_speed","usopen_f",5437,0.5429,0.685
+"16","usopen_f_second_ratio","usopen_f",5437,0.5429,0.685

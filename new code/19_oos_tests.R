@@ -75,15 +75,17 @@ save_scaled <- function(lst, suffix) {
 save_scaled(train_sets, "train_scaled")  # e.g. scaled/wimbledon_m_train_scaled.csv
 save_scaled(oos_sets,   "test_scaled")   # e.g. scaled/usopen_f_test_scaled.csv
 
-## model formulas
+## model formulas--swap spline with regular speed variable as desired
 form_speed <- serving_player_won ~ p_server_beats_returner +
   ElapsedSeconds_fixed + importance +
-  bs(Speed_MPH, degree = 3, df = 5) +
+  Speed_MPH +
+  # bs(Speed_MPH, degree = 3, df = 5) +
   factor(ServeWidth) + factor(ServeDepth)
 
 form_ratio <- serving_player_won ~ p_server_beats_returner +
   ElapsedSeconds_fixed + importance +
-  bs(speed_ratio, degree = 3, df = 5) +
+  Speed_MPH +
+  # bs(speed_ratio, degree = 3, df = 5) +
   factor(ServeWidth) + factor(ServeDepth)
 
 models <- list()
@@ -96,13 +98,13 @@ for (ds in names(train_sets)) {
   first  <- df_train[df_train$ServeNumber == 1]
   second <- df_train[df_train$ServeNumber == 2]
   
-  models[[paste(tourn, gender, "first_spline_speed", sep = "_")]]  <-
+  models[[paste(tourn, gender, "first_speed", sep = "_")]]  <-
     glm(form_speed,  data = first,  family = binomial)
-  models[[paste(tourn, gender, "first_spline_ratio", sep = "_")]]  <-
+  models[[paste(tourn, gender, "first_ratio", sep = "_")]]  <-
     glm(form_ratio,  data = first,  family = binomial)
-  models[[paste(tourn, gender, "second_spline_speed", sep = "_")]] <-
+  models[[paste(tourn, gender, "second_speed", sep = "_")]] <-
     glm(form_speed,  data = second, family = binomial)
-  models[[paste(tourn, gender, "second_spline_ratio", sep = "_")]] <-
+  models[[paste(tourn, gender, "second_ratio", sep = "_")]] <-
     glm(form_ratio,  data = second, family = binomial)
 }
 
@@ -134,7 +136,8 @@ eval_grid <- expand_grid(
   mutate(
     model_name = paste(tournament, gender,
                        ifelse(serve_n == 1, "first", "second"),
-                       "spline", type, sep = "_"),
+                       # "spline",    # removed if desired
+                       type, sep = "_"),
     label      = paste(tournament, gender,
                        ifelse(serve_n == 1, "first", "second"),
                        type, sep = "_"),
@@ -154,4 +157,4 @@ oos_results <- map_dfr(1:nrow(eval_grid), function(i) {
 
 print(oos_results, n = Inf)
 
-write.csv(oos_results, "oos_results_all.csv")
+write.csv(oos_results, "oos_results_all_linear.csv")
