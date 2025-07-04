@@ -4,11 +4,14 @@
 ##  - 3-fold CV grid-search for (size, decay)
 ##  - Computes test accuracy & log loss
 ############################################################
+rm(list=ls())
 
 ## 0.  Packages & helpers ----------------------------------------------
 library(data.table)
 library(tidyverse)   # dplyr, purrr, tibble, …
 library(nnet)        # feed-forward neural nets
+library(tibble)
+library(purrr)
 
 ## Fast log-loss (binary)
 fast_logloss <- function(truth, prob1, eps = 1e-15) {
