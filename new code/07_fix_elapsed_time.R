@@ -136,7 +136,10 @@ subset_f <- subset_f %>%
   select(-lag_elapsed, -time_diff, -avg_time_diff, -flagged)
 colSums(is.na(subset_f))
 
-write.csv(subset_f, "../data/wimbledon_subset_f.csv", row.names = FALSE)
+# remove all rows from subset_f that have NAs
+subset_f <- subset_f[complete.cases(subset_f), ]
+
+write.csv(subset_f, "out_data/wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
