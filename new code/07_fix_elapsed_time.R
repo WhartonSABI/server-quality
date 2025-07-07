@@ -143,10 +143,14 @@ write.csv(subset_f, "out_data/wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
+subset_m <- as.data.table(read.csv("out_data/wimbledon_subset_m.csv"))
+subset_f <- as.data.table(read.csv("out_data/wimbledon_subset_f.csv"))
+
 # standardize numeric cols
 
 cols_to_standardize <- c(
   "Speed_MPH",
+  "speed_ratio",
   "ElapsedSeconds_fixed",
   "df_pct_server",
   "p_server_beats_returner",
@@ -169,6 +173,8 @@ subset_f <- subset_f %>%
       .names = "{.col}_z"
     )
   )
+
+names(subset_f)
 
 # write the standardized data to csv
 write.csv(subset_m, "out_data/scaled/wimbledon_subset_m_training.csv", row.names = FALSE)

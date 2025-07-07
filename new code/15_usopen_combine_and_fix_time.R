@@ -283,6 +283,7 @@ subset_f_test <- subset_f_test %>%
 
 cols_to_standardize <- c(
   "Speed_MPH",
+  "speed_ratio",
   "ElapsedSeconds_fixed",
   "df_pct_server",
   "p_server_beats_returner",
@@ -307,6 +308,8 @@ subset_f <- subset_f_test %>%
       .names = "{.col}_z"
     )
   )
+
+names(subset_f)
 
 # write the standardized data to csv
 write.csv(subset_m, "out_data/scaled/usopen_subset_m_training.csv", row.names = FALSE)

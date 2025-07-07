@@ -14,8 +14,8 @@ library(dplyr)
 # subset_f <- fread("wimbledon_f_train.csv")
 
 ##
-subset_m <- fread("scaled/wimbledon_m_train_scaled.csv")
-subset_f <- fread("scaled/wimbledon_f_train_scaled.csv")
+subset_m <- fread("out_data/scaled/wimbledon_subset_m_training.csv")
+subset_f <- fread("out_data/scaled/wimbledon_subset_f_training.csv")
 
 # --- linear coefficients (no spline) ---
 # --- ---
@@ -91,6 +91,8 @@ m_second <- subset_m[ServeNumber == 2]
 f_first  <- subset_f[ServeNumber == 1]
 f_second <- subset_f[ServeNumber == 2]
 
+names(m_first)
+
 ####################################################
 ## 3.  Fit (linear) GLMs and make the plots ########
 ####################################################
@@ -98,8 +100,8 @@ run_linear_group <- function(df, group_id, group_name) {
   
   # --- model with Speed_MPH ---------------------------------
   model_speed <- glm(
-    serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed +
-      importance + Speed_MPH + factor(ServeWidth) + factor(ServeDepth),
+    serving_player_won ~ p_server_beats_returner_z + ElapsedSeconds_fixed_z +
+      importance_z + Speed_MPH_z + df_pct_server_z + factor(ServeWidth) + factor(ServeDepth),
     data   = df,
     family = binomial
   )

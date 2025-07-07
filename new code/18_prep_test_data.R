@@ -31,11 +31,11 @@ colSums(is.na(usopen_2018))
 
 # binary variable: whether serving player won or lost
 usopen_2018 <- usopen_2018 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2018, "../data/usopen_2018_combined.csv", row.names = FALSE)
+write.csv(usopen_2018, "out_data/usopen_2018_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -62,11 +62,11 @@ colSums(is.na(usopen_2019))
 
 # binary variable: whether serving player won or lost
 usopen_2019 <- usopen_2019 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
+  filter(PointServer != 0) %>%
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
-write.csv(usopen_2019, "../data/usopen_2019_combined.csv", row.names = FALSE)
+write.csv(usopen_2019, "out_data/usopen_2019_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -303,8 +303,8 @@ subset_2018_f <- subset_2018_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2018_m, "../data/usopen_subset_2018_m.csv", row.names = FALSE)
-write.csv(subset_2018_f, "../data/usopen_subset_2018_f.csv", row.names = FALSE)
+write.csv(subset_2018_m, "out_data/usopen_subset_2018_m.csv", row.names = FALSE)
+write.csv(subset_2018_f, "out_data/usopen_subset_2018_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -519,8 +519,8 @@ subset_2019_f <- subset_2019_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2019_m, "../data/usopen_subset_2019_m.csv", row.names = FALSE)
-write.csv(subset_2019_f, "../data/usopen_subset_2019_f.csv", row.names = FALSE)
+write.csv(subset_2019_m, "out_data/usopen_subset_2019_m.csv", row.names = FALSE)
+write.csv(subset_2019_f, "out_data/usopen_subset_2019_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -638,7 +638,7 @@ subset_m <- subset_m %>%
 setnames(subset_m, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_m, "oos_test_usopen_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "out_data/oos_test_usopen_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -659,7 +659,7 @@ subset_f <- subset_f %>%
 setnames(subset_f, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_f, "oos_test_usopen_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/oos_test_usopen_subset_f.csv", row.names = FALSE)
 
 # -----------------------------------------------------------------------------------------------------
 
@@ -668,11 +668,11 @@ wimbledon_2018 <- as.data.table(read.csv("../data/wimbledon_2018_combined.csv"))
 wimbledon_2019 <- as.data.table(read.csv("../data/wimbledon_2019_combined.csv"))
 
 wimbledon_2018 <- wimbledon_2018 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  filter(PointServer != 0) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 wimbledon_2019 <- wimbledon_2019 %>%
-  filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>% 
+  filter(PointServer != 0) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 colSums(is.na(wimbledon_2018))
@@ -889,8 +889,8 @@ subset_2018_f <- subset_2018_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2018_m, "../data/wimbledon_subset_2018_m.csv", row.names = FALSE)
-write.csv(subset_2018_f, "../data/wimbledon_subset_2018_f.csv", row.names = FALSE)
+write.csv(subset_2018_m, "out_data/wimbledon_subset_2018_m.csv", row.names = FALSE)
+write.csv(subset_2018_f, "out_data/wimbledon_subset_2018_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -1105,8 +1105,8 @@ subset_2019_f <- subset_2019_f %>%
 #     as.difftime(ElapsedTime, format = "%H:%M:%S", units = "secs")
 #   ))
 
-write.csv(subset_2019_m, "../data/wimbledon_subset_2019_m.csv", row.names = FALSE)
-write.csv(subset_2019_f, "../data/wimbledon_subset_2019_f.csv", row.names = FALSE)
+write.csv(subset_2019_m, "out_data/wimbledon_subset_2019_m.csv", row.names = FALSE)
+write.csv(subset_2019_f, "out_data/wimbledon_subset_2019_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -1142,6 +1142,10 @@ subset_m <- subset_m %>%
   filter(!match_id %in% problem_ids)
 
 subset_m$ElapsedSeconds_fixed <- subset_m$ElapsedSeconds
+
+# histogram of ElapsedSeconds_fixed
+ggplot(subset_m, aes(x = ElapsedSeconds_fixed)) +
+  geom_histogram(color = "black", fill = "steelblue", na.rm = TRUE) 
 
 # write.csv(subset_m, "../data/usopen_subset_m.csv", row.names = FALSE)
 
@@ -1180,7 +1184,7 @@ subset_m <- subset_m %>%
 setnames(subset_m, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_m, "oos_test_wimbledon_subset_m.csv", row.names = FALSE)
+write.csv(subset_m, "out_data/oos_test_wimbledon_subset_m.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -1201,6 +1205,177 @@ subset_f <- subset_f %>%
 setnames(subset_f, old = c("... <- NULL"),
          new = c("p_server_beats_returner"))
 
-write.csv(subset_f, "oos_test_wimbledon_subset_f.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/oos_test_wimbledon_subset_f.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
+
+## standardize important cols
+
+subset_m <- as.data.table(read.csv("out_data/oos_test_wimbledon_subset_m.csv"))
+subset_f <- as.data.table(read.csv("out_data/oos_test_wimbledon_subset_f.csv"))
+
+# 1) get every player who ever served
+servers <- subset_m %>%
+  filter(ServeNumber %in% c(1,2)) %>%
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
+  pull(ServerName) %>%
+  unique()
+
+# 2) function to compute df_pct for one server
+compute_df_for <- function(name) {
+  subset_m %>%
+    filter(
+      (PointServer == 1 & player1 == name) |
+        (PointServer == 2 & player2 == name)
+    ) %>%
+    mutate(
+      DF_flag = if_else(PointServer == 1, P1DoubleFault, P2DoubleFault)
+    ) %>%
+    group_by(match_id) %>%
+    summarise(
+      ServerName    = name,
+      total_serves  = n(),
+      double_faults = sum(DF_flag, na.rm = TRUE),
+      df_pct_server        = double_faults / total_serves,
+      .groups       = "drop"
+    )
+}
+
+# 3) apply it to every server and bind the results
+all_rates <- map_dfr(servers, compute_df_for)
+
+print(all_rates)
+
+## merge all_rates with subset_m based on match_id and ServerName
+subset_m_test <- subset_m %>% 
+  # identify who is serving this point
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>% 
+  
+  # now the key columns exist in both tables
+  left_join(all_rates, by = c("match_id", "ServerName"))
+
+colSums(is.na(subset_m_test))
+#-----------------------------------------------------------------------------------------------------
+
+# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
+subset_m_test <- subset_m_test %>%
+  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
+         ServeDepth %in% c("CTL", "NCTL"))
+
+cols_to_standardize <- c(
+  "Speed_MPH",
+  "ElapsedSeconds_fixed",
+  "df_pct_server",
+  "p_server_beats_returner",
+  "importance"
+)
+
+subset_m <- subset_m_test %>% 
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+
+subset_f <- subset_f_test %>%
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+
+# write the standardized data to csv
+write.csv(subset_m, "out_data/scaled/wimbledon_subset_m_testing.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/scaled/wimbledon_subset_f_testing.csv", row.names = FALSE)
+
+#-----------------------------------------------------------------------------------------------------
+
+## usopen: standardize important cols
+
+subset_m <- as.data.table(read.csv("out_data/oos_test_usopen_subset_m.csv"))
+subset_f <- as.data.table(read.csv("out_data/oos_test_usopen_subset_f.csv"))
+
+# 1) get every player who ever served
+servers <- subset_f %>%
+  filter(ServeNumber %in% c(1,2)) %>%
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
+  pull(ServerName) %>%
+  unique()
+
+# 2) function to compute df_pct for one server
+compute_df_for <- function(name) {
+  subset_f %>%
+    filter(
+      (PointServer == 1 & player1 == name) |
+        (PointServer == 2 & player2 == name)
+    ) %>%
+    mutate(
+      DF_flag = if_else(PointServer == 1, P1DoubleFault, P2DoubleFault)
+    ) %>%
+    group_by(match_id) %>%
+    summarise(
+      ServerName    = name,
+      total_serves  = n(),
+      double_faults = sum(DF_flag, na.rm = TRUE),
+      df_pct_server        = double_faults / total_serves,
+      .groups       = "drop"
+    )
+}
+
+# 3) apply it to every server and bind the results
+all_rates <- map_dfr(servers, compute_df_for)
+
+print(all_rates)
+
+## merge all_rates with subset_m based on match_id and ServerName
+subset_f_test <- subset_f %>% 
+  # identify who is serving this point
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>% 
+  
+  # now the key columns exist in both tables
+  left_join(all_rates, by = c("match_id", "ServerName"))
+
+colSums(is.na(subset_f_test))
+#-----------------------------------------------------------------------------------------------------
+
+# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
+subset_f_test <- subset_f_test %>%
+  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
+         ServeDepth %in% c("CTL", "NCTL"))
+
+cols_to_standardize <- c(
+  "Speed_MPH",
+  "ElapsedSeconds_fixed",
+  "df_pct_server",
+  "p_server_beats_returner",
+  "importance"
+)
+
+subset_m <- subset_m_test %>% 
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+
+subset_f <- subset_f_test %>%
+  mutate(
+    across(
+      all_of(cols_to_standardize),
+      ~ as.numeric(scale(.x, center = TRUE, scale = TRUE)),   # mean 0, sd 1
+      .names = "{.col}_z"
+    )
+  )
+
+# write the standardized data to csv
+write.csv(subset_m, "out_data/scaled/usopen_subset_m_testing.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/scaled/usopen_subset_f_testing.csv", row.names = FALSE)
+
+#-----------------------------------------------------------------------------------------------------
+
