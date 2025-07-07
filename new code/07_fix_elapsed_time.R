@@ -136,8 +136,8 @@ subset_f <- subset_f %>%
   select(-lag_elapsed, -time_diff, -avg_time_diff, -flagged)
 colSums(is.na(subset_f))
 
-# remove all rows from subset_f that have NAs
-subset_f <- subset_f[complete.cases(subset_f), ]
+# remove all rows from subset_f that have NAs in ElapsedSeconds_fixed column
+subset_f <- subset_f[!is.na(subset_f$ElapsedSeconds_fixed), ]
 
 write.csv(subset_f, "out_data/wimbledon_subset_f.csv", row.names = FALSE)
 
