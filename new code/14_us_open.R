@@ -30,14 +30,18 @@ usopen_2021 <- left_join(usopen_2021_points, usopen_2021_matches, by = "match_id
 names(usopen_2021)
 colSums(is.na(usopen_2021))
 
+usopen_2021 <- usopen_2021 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 # binary variable: whether serving player won or lost
 # usopen_2021 <- usopen_2021 %>%
 #   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
-usopen_2021 <- usopen_2021 %>%
-  filter(PointServer != 0) %>%
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+# usopen_2021 <- usopen_2021 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 write.csv(usopen_2021, "out_data/usopen_2021_combined.csv", row.names = FALSE)
 
@@ -69,8 +73,12 @@ colSums(is.na(usopen_2022))
 #   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# usopen_2022 <- usopen_2022 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2022 <- usopen_2022 %>%
-  filter(PointServer != 0) %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
@@ -104,9 +112,14 @@ colSums(is.na(usopen_2023))
 #   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# usopen_2023 <- usopen_2023 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2023 <- usopen_2023 %>%
-  filter(PointServer != 0) %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 
 write.csv(usopen_2023, "out_data/usopen_2023_combined.csv", row.names = FALSE)
 
@@ -138,8 +151,12 @@ colSums(is.na(usopen_2024))
 #   filter(PointServer != 0, Speed_KMH != 0, Speed_MPH != 0) %>%
 #   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# usopen_2024 <- usopen_2024 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
 usopen_2024 <- usopen_2024 %>%
-  filter(PointServer != 0) %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
@@ -155,8 +172,8 @@ add_speed_ratio_column <- function(data) {
     filter(ServeNumber == 1) %>%
     group_by(match_id) %>%
     summarise(
-      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1], na.rm = TRUE),
-      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2], na.rm = TRUE),
+      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1 & Speed_MPH > 0], na.rm = TRUE),
+      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2 & Speed_MPH > 0], na.rm = TRUE),
       .groups = 'drop'
     )
   # Join the average first speed back to the original data
@@ -196,8 +213,8 @@ usopen_2024 <- left_join(usopen_2024, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2024))
 
 # divide male & female
-usopen_2024_male <- usopen_2024[1:25156,]
-usopen_2024_female <- usopen_2024[25157:nrow(usopen_2024),]
+usopen_2024_male <- usopen_2024[1:26610,]
+usopen_2024_female <- usopen_2024[26611:nrow(usopen_2024),]
 
 usopen_2024_male <- add_speed_ratio_column(usopen_2024_male)
 usopen_2024_female <- add_speed_ratio_column(usopen_2024_female)
@@ -413,8 +430,8 @@ usopen_2023 <- left_join(usopen_2023, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2023))
 
 # divide male & female
-usopen_2023_male <- usopen_2023[1:24847,]
-usopen_2023_female <- usopen_2023[24848:nrow(usopen_2023),]
+usopen_2023_male <- usopen_2023[1:25923,]
+usopen_2023_female <- usopen_2023[25924:nrow(usopen_2023),]
 
 usopen_2023_male <- add_speed_ratio_column(usopen_2023_male)
 usopen_2023_female <- add_speed_ratio_column(usopen_2023_female)
@@ -630,8 +647,8 @@ usopen_2022 <- left_join(usopen_2022, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2022))
 
 # divide male & female
-usopen_2022_male <- usopen_2022[1:25622,]
-usopen_2022_female <- usopen_2022[25623:nrow(usopen_2022),]
+usopen_2022_male <- usopen_2022[1:26863,]
+usopen_2022_female <- usopen_2022[26864:nrow(usopen_2022),]
 
 usopen_2022_male <- add_speed_ratio_column(usopen_2022_male)
 usopen_2022_female <- add_speed_ratio_column(usopen_2022_female)
@@ -846,8 +863,8 @@ usopen_2021 <- left_join(usopen_2021, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2021))
 
 # divide male & female
-usopen_2021_male <- usopen_2021[1:26917,]
-usopen_2021_female <- usopen_2021[26918:nrow(usopen_2021),]
+usopen_2021_male <- usopen_2021[1:28127,]
+usopen_2021_female <- usopen_2021[28128:nrow(usopen_2021),]
 
 usopen_2021_male <- add_speed_ratio_column(usopen_2021_male)
 usopen_2021_female <- add_speed_ratio_column(usopen_2021_female)

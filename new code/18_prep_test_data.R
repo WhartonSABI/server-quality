@@ -29,10 +29,16 @@ usopen_2018 <- left_join(usopen_2018_points, usopen_2018_matches, by = "match_id
 names(usopen_2018)
 colSums(is.na(usopen_2018))
 
-# binary variable: whether serving player won or lost
+# get rid of rows where there is no double fault, but Speed_MPH == 0
 usopen_2018 <- usopen_2018 %>%
-  filter(PointServer != 0) %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+
+# binary variable: whether serving player won or lost
+# usopen_2018 <- usopen_2018 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(usopen_2018, "out_data/usopen_2018_combined.csv", row.names = FALSE)
@@ -60,10 +66,16 @@ usopen_2019 <- left_join(usopen_2019_points, usopen_2019_matches, by = "match_id
 names(usopen_2019)
 colSums(is.na(usopen_2019))
 
-# binary variable: whether serving player won or lost
+# get rid of rows where there is no double fault, but Speed_MPH == 0
 usopen_2019 <- usopen_2019 %>%
-  filter(PointServer != 0) %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+
+# # binary variable: whether serving player won or lost
+# usopen_2019 <- usopen_2019 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 
 write.csv(usopen_2019, "out_data/usopen_2019_combined.csv", row.names = FALSE)
@@ -78,8 +90,8 @@ add_speed_ratio_column <- function(data) {
     filter(ServeNumber == 1) %>%
     group_by(match_id) %>%
     summarise(
-      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1], na.rm = TRUE),
-      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2], na.rm = TRUE),
+      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1 & Speed_MPH > 0], na.rm = TRUE),
+      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2 & Speed_MPH > 0], na.rm = TRUE),
       .groups = 'drop'
     )
   # Join the average first speed back to the original data
@@ -119,8 +131,8 @@ usopen_2018 <- left_join(usopen_2018, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2018))
 
 # divide male & female
-usopen_2018_male <- usopen_2018[1:17232,]
-usopen_2018_female <- usopen_2018[17233:nrow(usopen_2018),]
+usopen_2018_male <- usopen_2018[1:18060,]
+usopen_2018_female <- usopen_2018[18061:nrow(usopen_2018),]
 
 usopen_2018_male <- add_speed_ratio_column(usopen_2018_male)
 usopen_2018_female <- add_speed_ratio_column(usopen_2018_female)
@@ -335,8 +347,8 @@ usopen_2019 <- left_join(usopen_2019, score_importance_dtmc, by = "state")
 colSums(is.na(usopen_2019))
 
 # divide male & female
-usopen_2019_male <- usopen_2019[1:15478,]
-usopen_2019_female <- usopen_2019[15479:nrow(usopen_2019),]
+usopen_2019_male <- usopen_2019[1:16784,]
+usopen_2019_female <- usopen_2019[16785:nrow(usopen_2019),]
 
 usopen_2019_male <- add_speed_ratio_column(usopen_2019_male)
 usopen_2019_female <- add_speed_ratio_column(usopen_2019_female)
@@ -531,7 +543,8 @@ subset_m <- rbindlist(list(
 ))
 
 subset_m <- subset_m %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "") %>% 
+  filter(!is.na(speed_ratio))
 
 # combine female data
 subset_f <- rbindlist(list(
@@ -540,7 +553,8 @@ subset_f <- rbindlist(list(
 ))
 
 subset_f <- subset_f %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "") %>% 
+  filter(!is.na(speed_ratio))
 
 # write.csv(subset_f, "test_subset_f.csv")
 
@@ -664,18 +678,8 @@ write.csv(subset_f, "out_data/oos_test_usopen_subset_f.csv", row.names = FALSE)
 # -----------------------------------------------------------------------------------------------------
 
 ## load 2018 and 2019 wimbledon data, then combine 
-wimbledon_2018 <- as.data.table(read.csv("../data/wimbledon_2018_combined.csv"))
-wimbledon_2019 <- as.data.table(read.csv("../data/wimbledon_2019_combined.csv"))
-
-wimbledon_2018 <- wimbledon_2018 %>%
-  filter(PointServer != 0) %>% 
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
-
-wimbledon_2019 <- wimbledon_2019 %>%
-  filter(PointServer != 0) %>% 
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
-
-colSums(is.na(wimbledon_2018))
+wimbledon_2018 <- as.data.table(read.csv("out_data/wimbledon_2018_combined.csv"))
+wimbledon_2019 <- as.data.table(read.csv("out_data/wimbledon_2019_combined.csv"))
 
 ### transform 2018 data
 wimbledon_2018 <- wimbledon_2018 %>% 
@@ -703,8 +707,8 @@ wimbledon_2018 <- left_join(wimbledon_2018, score_importance_dtmc, by = "state")
 colSums(is.na(wimbledon_2018))
 
 # divide male & female
-wimbledon_2018_male <- wimbledon_2018[1:15702,]
-wimbledon_2018_female <- wimbledon_2018[15703:nrow(wimbledon_2018),]
+wimbledon_2018_male <- wimbledon_2018[1:16833,]
+wimbledon_2018_female <- wimbledon_2018[16834:nrow(wimbledon_2018),]
 
 wimbledon_2018_male <- add_speed_ratio_column(wimbledon_2018_male)
 wimbledon_2018_female <- add_speed_ratio_column(wimbledon_2018_female)
@@ -921,8 +925,8 @@ wimbledon_2019 <- left_join(wimbledon_2019, score_importance_dtmc, by = "state")
 colSums(is.na(wimbledon_2019))
 
 # divide male & female
-wimbledon_2019_male <- wimbledon_2019[1:15150,]
-wimbledon_2019_female <- wimbledon_2019[15151:nrow(wimbledon_2019),]
+wimbledon_2019_male <- wimbledon_2019[1:16174,]
+wimbledon_2019_female <- wimbledon_2019[16175:nrow(wimbledon_2019),]
 
 wimbledon_2019_male <- add_speed_ratio_column(wimbledon_2019_male)
 wimbledon_2019_female <- add_speed_ratio_column(wimbledon_2019_female)
@@ -1117,7 +1121,8 @@ subset_m <- rbindlist(list(
 ))
 
 subset_m <- subset_m %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "") %>% 
+  filter(!is.na(speed_ratio))
 
 # combine female data
 subset_f <- rbindlist(list(
@@ -1126,7 +1131,8 @@ subset_f <- rbindlist(list(
 ))
 
 subset_f <- subset_f %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "") %>% 
+  filter(!is.na(speed_ratio))
 
 # write.csv(subset_f, "test_subset_f.csv")
 
@@ -1215,6 +1221,48 @@ subset_m <- as.data.table(read.csv("out_data/oos_test_wimbledon_subset_m.csv"))
 subset_f <- as.data.table(read.csv("out_data/oos_test_wimbledon_subset_f.csv"))
 
 # 1) get every player who ever served
+servers <- subset_m %>%
+  filter(ServeNumber %in% c(1,2)) %>%
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
+  pull(ServerName) %>%
+  unique()
+
+# 2) function to compute df_pct for one server
+compute_df_for <- function(name) {
+  subset_m %>%
+    filter(
+      (PointServer == 1 & player1 == name) |
+        (PointServer == 2 & player2 == name)
+    ) %>%
+    mutate(
+      DF_flag = if_else(PointServer == 1, P1DoubleFault, P2DoubleFault)
+    ) %>%
+    group_by(match_id) %>%
+    summarise(
+      ServerName    = name,
+      total_serves  = n(),
+      double_faults = sum(DF_flag, na.rm = TRUE),
+      df_pct_server        = double_faults / total_serves,
+      .groups       = "drop"
+    )
+}
+
+# 3) apply it to every server and bind the results
+all_rates <- map_dfr(servers, compute_df_for)
+
+print(all_rates)
+
+## merge all_rates with subset_m based on match_id and ServerName
+subset_m_test <- subset_m %>% 
+  # identify who is serving this point
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>% 
+  
+  # now the key columns exist in both tables
+  left_join(all_rates, by = c("match_id", "ServerName"))
+
+colSums(is.na(subset_m_test))
+
+# 1) get every player who ever served
 servers <- subset_f %>%
   filter(ServeNumber %in% c(1,2)) %>%
   mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
@@ -1256,11 +1304,6 @@ subset_f_test <- subset_f %>%
 
 colSums(is.na(subset_f_test))
 #-----------------------------------------------------------------------------------------------------
-
-# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
-subset_f_test <- subset_f_test %>%
-  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
-         ServeDepth %in% c("CTL", "NCTL"))
 
 cols_to_standardize <- c(
   "Speed_MPH",
@@ -1341,12 +1384,50 @@ subset_m_test <- subset_m %>%
   left_join(all_rates, by = c("match_id", "ServerName"))
 
 colSums(is.na(subset_m_test))
+
+# same with females
+servers <- subset_f %>%
+  filter(ServeNumber %in% c(1,2)) %>%
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>%
+  pull(ServerName) %>%
+  unique()
+
+# 2) function to compute df_pct for one server
+compute_df_for <- function(name) {
+  subset_f %>%
+    filter(
+      (PointServer == 1 & player1 == name) |
+        (PointServer == 2 & player2 == name)
+    ) %>%
+    mutate(
+      DF_flag = if_else(PointServer == 1, P1DoubleFault, P2DoubleFault)
+    ) %>%
+    group_by(match_id) %>%
+    summarise(
+      ServerName    = name,
+      total_serves  = n(),
+      double_faults = sum(DF_flag, na.rm = TRUE),
+      df_pct_server        = double_faults / total_serves,
+      .groups       = "drop"
+    )
+}
+
+# 3) apply it to every server and bind the results
+all_rates <- map_dfr(servers, compute_df_for)
+
+print(all_rates)
+
+## merge all_rates with subset_m based on match_id and ServerName
+subset_f_test <- subset_f %>% 
+  # identify who is serving this point
+  mutate(ServerName = if_else(PointServer == 1, player1, player2)) %>% 
+  
+  # now the key columns exist in both tables
+  left_join(all_rates, by = c("match_id", "ServerName"))
+
+colSums(is.na(subset_f_test))
 #-----------------------------------------------------------------------------------------------------
 
-# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
-subset_m_test <- subset_m_test %>%
-  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
-         ServeDepth %in% c("CTL", "NCTL"))
 
 cols_to_standardize <- c(
   "Speed_MPH",

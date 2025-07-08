@@ -29,7 +29,8 @@ subset_m <- rbindlist(list(
 ))
 
 subset_m <- subset_m %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "")%>% 
+  filter(!is.na(speed_ratio))
 
 # combine female data
 subset_f <- rbindlist(list(
@@ -40,7 +41,8 @@ subset_f <- rbindlist(list(
 ))
 
 subset_f <- subset_f %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "")%>% 
+  filter(!is.na(speed_ratio))
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -135,7 +137,7 @@ write.csv(subset_f, "out_data/usopen_subset_f.csv", row.names = FALSE)
 subset_m <- as.data.table(read.csv("out_data/usopen_subset_m.csv"))
 subset_f <- as.data.table(read.csv("out_data/usopen_subset_f.csv"))
 
-names(subset_m)
+names(subset_f)
 
 # Convert ELO to logistic (Bradley-Terry scale)
 subset_m[, welo_p1_bt := 0.0057565 * player1_avg_welo]
@@ -158,6 +160,8 @@ write.csv(subset_m, "out_data/usopen_subset_m.csv", row.names = FALSE)
 # Convert ELO to logistic (Bradley-Terry scale)
 subset_f[, welo_p1_bt := 0.0057565 * player1_avg_welo]
 subset_f[, welo_p2_bt := 0.0057565 * player2_avg_welo]
+
+names(subset_m)
 
 ## female
 subset_f <- subset_f %>%
@@ -221,12 +225,6 @@ subset_m_test <- subset_m %>%
   left_join(all_rates, by = c("match_id", "ServerName"))
 
 colSums(is.na(subset_m_test))
-#-----------------------------------------------------------------------------------------------------
-
-# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
-subset_m_test <- subset_m_test %>%
-  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
-         ServeDepth %in% c("CTL", "NCTL"))
 
 # -----------------------------------------------------------------------------------------------------
 
@@ -271,13 +269,17 @@ subset_f_test <- subset_f %>%
   # now the key columns exist in both tables
   left_join(all_rates, by = c("match_id", "ServerName"))
 
-colSums(is.na(subset_f_test))
+colSums(is.na(subset_m_test))
+
+write.csv(subset_m, "out_data/usopen_subset_m.csv", row.names = FALSE)
+write.csv(subset_f, "out_data/usopen_subset_f.csv", row.names = FALSE)
+
 #-----------------------------------------------------------------------------------------------------
 
-# filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
-subset_f_test <- subset_f_test %>%
-  filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
-         ServeDepth %in% c("CTL", "NCTL"))
+# # filter to only include rows where ServeWidth is in B, BC, BW, C, or W. and ServeDepth is CTL or NCTL
+# subset_f_test <- subset_f_test %>%
+#   filter(ServeWidth %in% c("B", "BC", "BW", "C", "W"),
+#          ServeDepth %in% c("CTL", "NCTL"))
 
 # -----------------------------------------------------------------------------------------------------
 
