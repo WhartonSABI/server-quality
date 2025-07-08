@@ -1,15 +1,15 @@
 rm(list=ls())
 set.seed(123)
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m_scaled <- "scaled/wimbledon_m_train_scaled.csv" # 2021–2024 data
-path_train_w_f_scaled <- "scaled/wimbledon_f_train_scaled.csv"
-path_train_u_m_scaled <- "scaled/usopen_m_train_scaled.csv"
-path_train_u_f_scaled <- "scaled/usopen_f_train_scaled.csv"
+path_train_w_m_scaled <- "out_data/scaled/wimbledon_subset_m_training.csv" # 2021–2024 data
+path_train_w_f_scaled <- "out_data/scaled/wimbledon_subset_f_training.csv"
+path_train_u_m_scaled <- "out_data/scaled/usopen_subset_m_training.csv"
+path_train_u_f_scaled <- "out_data/scaled/usopen_subset_f_training.csv"
 
-path_oos_w_m_scaled   <- "scaled/wimbledon_m_test_scaled.csv" # 2018–2019 data
-path_oos_w_f_scaled   <- "scaled/wimbledon_f_test_scaled.csv"
-path_oos_u_m_scaled   <- "scaled/usopen_m_test_scaled.csv"
-path_oos_u_f_scaled   <- "scaled/usopen_f_test_scaled.csv"
+path_oos_w_m_scaled   <- "out_data/scaled/wimbledon_subset_m_testing.csv" # 2018–2019 data
+path_oos_w_f_scaled   <- "out_data/scaled/wimbledon_subset_f_testing.csv"
+path_oos_u_m_scaled   <- "out_data/scaled/usopen_subset_m_testing.csv"
+path_oos_u_f_scaled   <- "out_data/scaled/usopen_subset_f_testing.csv"
 
 library(tidyverse)   # dplyr / readr / ggplot2 / tibble …
 library(data.table)  # fread
@@ -41,10 +41,11 @@ train_sets <- map(train_sets, ~{
 
 # 3) define the “speed” formula
 form_speed <- serving_player_won ~
-  p_server_beats_returner +
-  ElapsedSeconds_fixed +
-  importance +
-  Speed_MPH + ## swap out Speed_MPH and speed_ratio as desired 
+  p_server_beats_returner_z +
+  ElapsedSeconds_fixed_z +
+  importance_z +
+  df_pct_server_z +
+  Speed_MPH_z + ## swap out Speed_MPH and speed_ratio as desired 
   ServeWidth +           # now factors → one-hot via model.matrix()
   ServeDepth             # same
 

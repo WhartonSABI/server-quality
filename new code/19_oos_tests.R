@@ -1,15 +1,15 @@
 rm(list=ls())
 
 ## -------- 0. FILE LOCATIONS -------------------------------------------
-path_train_w_m <- "wimbledon_subset_m.csv" # 2021-2024 data, in the "data" folder
-path_train_w_f <- "wimbledon_subset_f.csv"
-path_train_u_m <- "usopen_subset_m.csv"
-path_train_u_f <- "usopen_subset_f.csv"
+path_train_w_m <- "out_data/scaled/wimbledon_subset_m_training.csv" # 2021-2024 data
+path_train_w_f <- "out_data/scaled/wimbledon_subset_f_training.csv"
+path_train_u_m <- "out_data/scaled/usopen_subset_m_training.csv"
+path_train_u_f <- "out_data/scaled/usopen_subset_f_training.csv"
 
-path_oos_w_m   <- "oos_test_wimbledon_subset_m.csv" # 2018-2019 data, in the "new_code" folder
-path_oos_w_f   <- "oos_test_wimbledon_subset_f.csv"
-path_oos_u_m   <- "oos_test_usopen_subset_m.csv"
-path_oos_u_f   <- "oos_test_usopen_subset_f.csv"
+path_oos_w_m   <- "out_data/scaled/wimbledon_subset_m_testing.csv" # 2018-2019 data
+path_oos_w_f   <- "out_data/scaled/wimbledon_subset_f_testing.csv"
+path_oos_u_m   <- "out_data/scaled/usopen_subset_m_testing.csv"
+path_oos_u_f   <- "out_data/scaled/usopen_subset_f_testing.csv"
 
 library(tidyverse)   # dplyr / readr / ggplot2 …
 library(data.table)  # fread
@@ -33,58 +33,28 @@ oos_sets <- list(
   usopen_f    = fread(path_oos_u_f)
 )
 
-## helper – guarantee `ElapsedSeconds_fixed` exists ----------------------
-add_elapsed_fixed <- function(df) {
-  if (!"ElapsedSeconds_fixed" %in% names(df))
-    df$ElapsedSeconds_fixed <- df$ElapsedSeconds
-  df
-}
-train_sets <- map(train_sets, add_elapsed_fixed)
-oos_sets   <- map(oos_sets,   add_elapsed_fixed)
+train_sets <- lapply(train_sets, function(dt) dt[Speed_MPH > 0])
+oos_sets <- lapply(oos_sets, function(dt) dt[Speed_MPH > 0])
 
-# ── 1. variables to standardise ────────────────────────────────────────
-num_vars <- c("Speed_MPH",
-              "speed_ratio",
-              "importance",
-              "ElapsedSeconds_fixed",
-              "p_server_beats_returner")
-
-std_in_place <- function(df, vars) {
-  present <- intersect(vars, names(df))          # only those that exist
-  df <- df %>%
-    mutate(across(all_of(present),
-                  ~ as.numeric(scale(., center = TRUE, scale = TRUE))))
-  df
-}
-
-train_sets <- map(train_sets, std_in_place, vars = num_vars)
-oos_sets   <- map(oos_sets,   std_in_place, vars = num_vars)
-
-library(fs)          # for dir_create()
-dir_create("scaled") # put everything in a new folder called “scaled”
-
-# helper ---------------------------------------------------------------
-save_scaled <- function(lst, suffix) {
-  purrr::iwalk(lst, function(df, nm) {
-    fn <- file.path("scaled", paste0(nm, "_", suffix, ".csv"))
-    data.table::fwrite(df, fn)
-  })
-}
-
-# write files ----------------------------------------------------------
-save_scaled(train_sets, "train_scaled")  # e.g. scaled/wimbledon_m_train_scaled.csv
-save_scaled(oos_sets,   "test_scaled")   # e.g. scaled/usopen_f_test_scaled.csv
+# ## helper – guarantee `ElapsedSeconds_fixed` exists ----------------------
+# add_elapsed_fixed <- function(df) {
+#   if (!"ElapsedSeconds_fixed" %in% names(df))
+#     df$ElapsedSeconds_fixed <- df$ElapsedSeconds
+#   df
+# }
+# train_sets <- map(train_sets, add_elapsed_fixed)
+# oos_sets   <- map(oos_sets,   add_elapsed_fixed)
 
 ## model formulas--swap spline with regular speed variable as desired
-form_speed <- serving_player_won ~ p_server_beats_returner +
-  ElapsedSeconds_fixed + importance +
-  Speed_MPH +
+form_speed <- serving_player_won ~ p_server_beats_returner_z +
+  ElapsedSeconds_fixed_z + importance_z +
+  Speed_MPH_z + df_pct_server_z + 
   # bs(Speed_MPH, degree = 3, df = 5) +
   factor(ServeWidth) + factor(ServeDepth)
 
-form_ratio <- serving_player_won ~ p_server_beats_returner +
-  ElapsedSeconds_fixed + importance +
-  Speed_MPH +
+form_ratio <- serving_player_won ~ p_server_beats_returner_z +
+  ElapsedSeconds_fixed_z + importance_z +
+  speed_ratio_z + df_pct_server_z +
   # bs(speed_ratio, degree = 3, df = 5) +
   factor(ServeWidth) + factor(ServeDepth)
 
@@ -158,3 +128,89 @@ oos_results <- map_dfr(1:nrow(eval_grid), function(i) {
 print(oos_results, n = Inf)
 
 write.csv(oos_results, "oos_results_all_linear.csv")
+
+## -------- 0. FILE LOCATIONS -------------------------------------------
+## rerun for usopen male
+
+rm(list = ls())
+
+## -------- 0. FILE LOCATIONS -------------------------------------------
+path_train_u_m <- "out_data/scaled/usopen_subset_m_training.csv"
+path_oos_u_m   <- "out_data/scaled/usopen_subset_m_testing.csv"
+
+library(tidyverse)   # dplyr / readr / ggplot2 …
+library(data.table)  # fread
+library(splines)     # bs()
+library(yardstick)   # log_loss_vec()
+library(purrr) 
+
+## -------- 1. Load & clean data -----------------------------------------
+df_train <- fread(path_train_u_m) %>% filter(Speed_MPH > 0)
+df_test  <- fread(path_oos_u_m)   %>% filter(Speed_MPH > 0)
+
+## -------- 2. Model formulas (linear versions shown here) ---------------
+form_speed <- serving_player_won ~ p_server_beats_returner_z +
+  ElapsedSeconds_fixed_z + importance_z + Speed_MPH_z +
+  df_pct_server_z + factor(ServeWidth) + factor(ServeDepth)
+
+form_ratio <- serving_player_won ~ p_server_beats_returner_z +
+  ElapsedSeconds_fixed_z + importance_z + speed_ratio_z +
+  df_pct_server_z + factor(ServeWidth) + factor(ServeDepth)
+
+## -------- 3. Fit models ------------------------------------------------
+first_train  <- df_train[df_train$ServeNumber == 1]
+second_train <- df_train[df_train$ServeNumber == 2]
+
+models <- list(
+  first_speed  = glm(form_speed, data = first_train,  family = binomial),
+  first_ratio  = glm(form_ratio, data = first_train,  family = binomial),
+  second_speed = glm(form_speed, data = second_train, family = binomial),
+  second_ratio = glm(form_ratio, data = second_train, family = binomial)
+)
+
+## -------- 4. Scoring helper --------------------------------------------
+prepare_newdata <- function(model, df) {
+  for (fac in names(model$xlevels)) {
+    if (fac %in% names(df)) {
+      df[[fac]] <- factor(df[[fac]], levels = model$xlevels[[fac]])
+    }
+  }
+  df
+}
+
+score_model <- function(model, df, label) {
+  if (nrow(df) == 0) return(NULL)
+  df <- prepare_newdata(model, df)
+  probs <- predict(model, newdata = df, type = "response")
+  
+  keep  <- !is.na(probs) & !is.na(df$serving_player_won)
+  if (sum(keep) == 0) return(tibble(model = label, n = 0, accuracy = NA, log_loss = NA))
+  
+  probs <- probs[keep]
+  truth <- df$serving_player_won[keep]
+  
+  acc <- mean((probs > 0.5) == truth)
+  
+  eps <- 1e-15
+  probs_clipped <- pmin(pmax(probs, eps), 1 - eps)
+  ll <- -mean(truth * log(probs_clipped) + (1 - truth) * log(1 - probs_clipped))
+  
+  tibble(model = label, n = length(truth),
+         accuracy = round(acc, 4),
+         log_loss = round(ll, 4))
+}
+
+## -------- 5. Evaluate on US Open Male test set --------------------------
+first_test  <- df_test[df_test$ServeNumber == 1]
+second_test <- df_test[df_test$ServeNumber == 2]
+
+results <- bind_rows(
+  score_model(models$first_speed,  first_test,  "usopen_m_first_speed"),
+  score_model(models$first_ratio,  first_test,  "usopen_m_first_ratio"),
+  score_model(models$second_speed, second_test, "usopen_m_second_speed"),
+  score_model(models$second_ratio, second_test, "usopen_m_second_ratio")
+)
+
+print(results)
+
+write.csv(results, "oos_results_usopen_m_linear.csv", row.names = FALSE)
