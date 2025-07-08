@@ -14,8 +14,8 @@ add_speed_ratio_column <- function(data) {
     filter(ServeNumber == 1) %>%
     group_by(match_id) %>%
     summarise(
-      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1], na.rm = TRUE),
-      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2], na.rm = TRUE),
+      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1 & Speed_MPH > 0], na.rm = TRUE),
+      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2 & Speed_MPH > 0], na.rm = TRUE),
       .groups = 'drop'
     )
   # Join the average first speed back to the original data
@@ -63,8 +63,8 @@ colSums(is.na(wimbledon_2023))
 #-----------------------------------------------------------------------------------------------------
 
 # divide male & female
-wimbledon_2023_male <- wimbledon_2023[1:14948,]
-wimbledon_2023_female <- wimbledon_2023[14949:nrow(wimbledon_2023),]
+wimbledon_2023_male <- wimbledon_2023[1:15356,]
+wimbledon_2023_female <- wimbledon_2023[15357:nrow(wimbledon_2023),]
 
 wimbledon_2023_male <- add_speed_ratio_column(wimbledon_2023_male)
 wimbledon_2023_female <- add_speed_ratio_column(wimbledon_2023_female)
@@ -263,3 +263,4 @@ write.csv(subset_2023_f, "out_data/wimbledon_subset_2023_f.csv", row.names = FAL
 #-----------------------------------------------------------------------------------------------------
 
 ## i believe these two should be all set for EDA now
+

@@ -240,7 +240,14 @@ wimbledon_2018 <- left_join(wimbledon_2018_points, wimbledon_2018_matches, by = 
 names(wimbledon_2018)
 colSums(is.na(wimbledon_2018))
 
-write.csv(wimbledon_2018, "../data/wimbledon_2018_combined.csv", row.names = FALSE)
+# print number of rows where there is no double fault, but Speed_MPH == 0
+print(nrow(wimbledon_2018 %>% filter(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)))
+# get rid of rows where there is no double fault, but Speed_MPH == 0
+wimbledon_2018 <- wimbledon_2018 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+write.csv(wimbledon_2018, "out_data/wimbledon_2018_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -269,7 +276,12 @@ wimbledon_2019 <- left_join(wimbledon_2019_points, wimbledon_2019_matches, by = 
 names(wimbledon_2019)
 colSums(is.na(wimbledon_2019))
 
-write.csv(wimbledon_2019, "../data/wimbledon_2019_combined.csv", row.names = FALSE)
+# get rid of rows where there is no double fault, but Speed_MPH == 0
+wimbledon_2019 <- wimbledon_2019 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+
+write.csv(wimbledon_2019, "out_data/wimbledon_2019_combined.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -296,10 +308,14 @@ wimbledon_2021 <- left_join(wimbledon_2021_points, wimbledon_2021_matches, by = 
 names(wimbledon_2021)
 colSums(is.na(wimbledon_2021))
 
-wimbledon_2021 <- wimbledon_2021 %>%
-  filter(PointServer != 0) %>%
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+# wimbledon_2021 <- wimbledon_2021 %>%
+#   filter(PointServer != 0) %>%
+  # mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# get rid of rows where there is no double fault, but Speed_MPH == 0
+wimbledon_2021 <- wimbledon_2021 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 # binary variable: whether serving player won or lost
 # wimbledon_2021 <- wimbledon_2021 %>%
@@ -334,10 +350,14 @@ wimbledon_2022 <- left_join(wimbledon_2022_points, wimbledon_2022_matches, by = 
 names(wimbledon_2022)
 colSums(is.na(wimbledon_2022))
 
-wimbledon_2022 <- wimbledon_2022 %>%
-  filter(PointServer != 0) %>%
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+# wimbledon_2022 <- wimbledon_2022 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# get rid of rows where there is no double fault, but Speed_MPH == 0
+wimbledon_2022 <- wimbledon_2022 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 # binary variable: whether serving player won or lost
 # wimbledon_2022 <- wimbledon_2022 %>%
@@ -372,10 +392,14 @@ wimbledon_2023 <- left_join(wimbledon_2023_points, wimbledon_2023_matches, by = 
 names(wimbledon_2023)
 colSums(is.na(wimbledon_2023))
 
-wimbledon_2023 <- wimbledon_2023 %>%
-  filter(PointServer != 0) %>%
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+# wimbledon_2023 <- wimbledon_2023 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# get rid of rows where there is no double fault, but Speed_MPH == 0
+wimbledon_2023 <- wimbledon_2023 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 # binary variable: whether serving player won or lost
 # wimbledon_2023 <- wimbledon_2023 %>%
@@ -410,10 +434,17 @@ wimbledon_2024 <- left_join(wimbledon_2024_points, wimbledon_2024_matches, by = 
 names(wimbledon_2024)
 colSums(is.na(wimbledon_2024))
 
-wimbledon_2024 <- wimbledon_2024 %>%
-  filter(PointServer != 0) %>%
-  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
+# wimbledon_2024 <- wimbledon_2024 %>%
+#   filter(PointServer != 0) %>%
+#   mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
+# print number of rows where there is no double fault, but Speed_MPH == 0
+print(nrow(wimbledon_2024 %>% filter(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)))
+
+# get rid of rows where there is no double fault, but Speed_MPH == 0
+wimbledon_2024 <- wimbledon_2024 %>%
+  filter(!(P1DoubleFault == 0 & P2DoubleFault == 0 & Speed_MPH == 0)) %>% 
+  mutate(serving_player_won = ifelse((PointServer == 1 & PointWinner == 1) | (PointServer == 2 & PointWinner == 2), 1, 0))
 
 # binary variable: whether serving player won or lost
 # wimbledon_2024 <- wimbledon_2024 %>%

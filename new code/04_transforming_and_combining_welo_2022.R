@@ -14,8 +14,8 @@ add_speed_ratio_column <- function(data) {
     filter(ServeNumber == 1) %>%
     group_by(match_id) %>%
     summarise(
-      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1], na.rm = TRUE),
-      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2], na.rm = TRUE),
+      avg_player1_first_speed = mean(Speed_MPH[PointServer == 1 & Speed_MPH > 0], na.rm = TRUE),
+      avg_player2_first_speed = mean(Speed_MPH[PointServer == 2 & Speed_MPH > 0], na.rm = TRUE),
       .groups = 'drop'
     )
   # Join the average first speed back to the original data
@@ -63,8 +63,8 @@ colSums(is.na(wimbledon_2022))
 #-----------------------------------------------------------------------------------------------------
 
 # divide male & female
-wimbledon_2022_male <- wimbledon_2022[1:14462,]
-wimbledon_2022_female <- wimbledon_2022[14463:nrow(wimbledon_2022),]
+wimbledon_2022_male <- wimbledon_2022[1:15567,]
+wimbledon_2022_female <- wimbledon_2022[15568:nrow(wimbledon_2022),]
 
 wimbledon_2022_male <- add_speed_ratio_column(wimbledon_2022_male)
 wimbledon_2022_female <- add_speed_ratio_column(wimbledon_2022_female)

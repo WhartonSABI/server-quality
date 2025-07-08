@@ -29,7 +29,8 @@ subset_m <- rbindlist(list(
 ))
 
 subset_m <- subset_m %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "") %>% 
+  filter(!is.na(speed_ratio))
 
 write.csv(subset_m, "out_data/wimbledon_subset_m.csv")
 
@@ -42,7 +43,8 @@ subset_f <- rbindlist(list(
 ))
 
 subset_f <- subset_f %>%
-  filter(ServeDepth != "", ServeWidth != "")
+  filter(ServeDepth != "", ServeWidth != "")%>% 
+  filter(!is.na(speed_ratio))
 
 write.csv(subset_f, "out_data/wimbledon_subset_f.csv")
 
