@@ -17,6 +17,9 @@ library(dplyr)
 subset_m <- fread("out_data/scaled/wimbledon_subset_m_training.csv")
 subset_f <- fread("out_data/scaled/wimbledon_subset_f_training.csv")
 
+names(subset_m)
+subset_m$p_server_beats_returner_z
+
 # --- linear coefficients (no spline) ---
 # --- ---
 
@@ -29,9 +32,10 @@ plot_linear_model <- function(df, model, speed_col, title, save_path) {
   
   # build a reference data set where only `speed_col` varies
   ref_dat <- df |>
-    summarise(across(c(p_server_beats_returner,
-                       ElapsedSeconds_fixed,
-                       importance), \(x) mean(x, na.rm = TRUE))) |>
+    summarise(across(c(p_server_beats_returner_z,
+                       ElapsedSeconds_fixed_z,
+                       importance_z,
+                       df_pct_server_z), \(x) mean(x, na.rm = TRUE))) |>
     slice(rep(1, length(speed_vals)))    # recycle one row -> 200
   ref_dat[[speed_col]] <- speed_vals
   
@@ -108,22 +112,22 @@ run_linear_group <- function(df, group_id, group_name) {
   assign(paste0(group_id, "_linear_speed"), model_speed, envir = .GlobalEnv)
   
   plot_linear_model(
-    df, model_speed, "Speed_MPH",
+    df, model_speed, "Speed_MPH_z",
     title     = paste("Linear vs. Empirical (Speed MPH) —", group_name),
     save_path = paste0("../images/", group_id, "_linear_speed.png")
   )
   
   # --- model with speed_ratio -------------------------------
   model_ratio <- glm(
-    serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed +
-      importance + speed_ratio + factor(ServeWidth) + factor(ServeDepth),
+    serving_player_won ~ p_server_beats_returner_z + ElapsedSeconds_fixed_z +
+      importance_z + speed_ratio_z + df_pct_server_z + factor(ServeWidth) + factor(ServeDepth),
     data   = df,
     family = binomial
   )
   assign(paste0(group_id, "_linear_ratio"), model_ratio, envir = .GlobalEnv)
   
   plot_linear_model(
-    df, model_ratio, "speed_ratio",
+    df, model_ratio, "speed_ratio_z",
     title     = paste("Linear vs. Empirical (Speed Ratio) —", group_name),
     save_path = paste0("../images/", group_id, "_linear_ratio.png")
   )
@@ -225,25 +229,25 @@ f_second <- subset_f[ServeNumber == 2]
 # --- Function to fit spline models and plot ---
 run_spline_group <- function(df, group_id, group_name) {
   # Fit spline model with Speed_MPH
-  model_speed <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
-                       bs(Speed_MPH, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
+  model_speed <- glm(serving_player_won ~ p_server_beats_returner_z + ElapsedSeconds_fixed_z + importance_z +
+                      df_pct_server_z + bs(Speed_MPH_z, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
                      data = df, family = "binomial")
   
   # Save to global env with name
   assign(paste0(group_id, "_spline_speed"), model_speed, envir = .GlobalEnv)
   
-  plot_spline_model(df, model_speed, "Speed_MPH",
+  plot_spline_model(df, model_speed, "Speed_MPH_z",
                     title = paste("Spline vs. Empirical (Speed MPH) —", group_name),
                     save_path = paste0("../images/", group_id, "_spline_speed.png"))
   
   # Fit spline model with speed_ratio
-  model_ratio <- glm(serving_player_won ~ p_server_beats_returner + ElapsedSeconds_fixed + importance +
-                       bs(speed_ratio, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
+  model_ratio <- glm(serving_player_won ~ p_server_beats_returner_z + ElapsedSeconds_fixed_z + importance_z +
+                      df_pct_server_z + bs(speed_ratio_z, degree = 3, df = 5) + factor(ServeWidth) + factor(ServeDepth),
                      data = df, family = "binomial")
   
   assign(paste0(group_id, "_spline_ratio"), model_ratio, envir = .GlobalEnv)
   
-  plot_spline_model(df, model_ratio, "speed_ratio",
+  plot_spline_model(df, model_ratio, "speed_ratio_z",
                     title = paste("Spline vs. Empirical (Speed Ratio) —", group_name),
                     save_path = paste0("../images/", group_id, "_spline_ratio.png"))
 }
