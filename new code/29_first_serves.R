@@ -4,7 +4,7 @@ library(tidyverse)
 library(data.table)
 
 # --- Load Data ---
-subset_m <- fread("out_data/scaled/wimbledon_subset_f_training.csv")
+subset_m <- fread("out_data/scaled/wimbledon_subset_m_training.csv")
 names(subset_m)
 
 analyze_first_serve_strategy <- function(
