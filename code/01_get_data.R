@@ -8,7 +8,7 @@ library(tidyverse)
 #-----------------------------------------------------------------------------------------------------
 
 # Generalized helper function to clean one year's data for a given tournament
-process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "../data/raw_data", out_path = "out_data") {
+process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "../data/raw", out_path = "../data/processed") {
   # Compose file paths
   matches_file <- paste0(raw_path, "/", year, "-", tournament, "-matches.csv")
   points_file  <- paste0(raw_path, "/", year, "-", tournament, "-points.csv")
@@ -47,5 +47,5 @@ for (year in years) {
 }
 
 # read usopen 2021 to check
-usopen_2021 <- fread("out_data/usopen_2021_combined.csv")
+usopen_2021 <- fread("../data/processed/usopen_2021_combined.csv")
 names(usopen_2021)

@@ -8,7 +8,7 @@ library(data.table)
 combine_years <- function(tournament, years, gender, type = c("training", "testing")) {
   type <- match.arg(type)
   
-  files <- paste0("out_data/", tournament, "_subset_", years, "_", gender, ".csv")
+  files <- paste0("../data/processed/", tournament, "_subset_", years, "_", gender, ".csv")
   data_list <- lapply(files, fread)
   combined <- rbindlist(data_list, use.names = TRUE, fill = TRUE)
   
@@ -24,7 +24,7 @@ combine_years <- function(tournament, years, gender, type = c("training", "testi
                                             1 / (1 + exp(welo_p2_bt - welo_p1_bt)),
                                             1 / (1 + exp(welo_p1_bt - welo_p2_bt))))
   
-  out_file <- paste0("out_data/", tournament, "_subset_", gender, "_", type, ".csv")
+  out_file <- paste0("../data/processed/", tournament, "_subset_", gender, "_", type, ".csv")
   fwrite(combined, out_file)
 }
 

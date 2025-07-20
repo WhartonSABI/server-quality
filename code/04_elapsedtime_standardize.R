@@ -6,8 +6,8 @@ library(hms)
 #-----------------------------------------------------------------------------------------------------
 
 # change names of datasets if wanted
-subset_m <- as.data.table(read.csv("out_data/usopen_subset_m_training.csv"))
-subset_f <- as.data.table(read.csv("out_data/usopen_subset_f_training.csv"))
+subset_m <- as.data.table(read.csv("../data/processed/usopen_subset_m_training.csv"))
+subset_f <- as.data.table(read.csv("../data/processed/usopen_subset_f_training.csv"))
 
 names(subset_m)
 
@@ -66,7 +66,7 @@ ggplot(subset_m, aes(x = ElapsedSeconds_fixed)) +
   geom_histogram(color = "black", fill = "steelblue", na.rm = TRUE)
 
 # --- Save cleaned dataset ---
-write.csv(subset_m, "out_data/usopen_subset_m_training.csv", row.names = FALSE)
+write.csv(subset_m, "../data/processed/usopen_subset_m_training.csv", row.names = FALSE)
 
 #-----------------------------------------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ ggplot(subset_f, aes(x = ElapsedSeconds_fixed)) +
   geom_histogram(color = "black", fill = "steelblue", na.rm = TRUE)
 
 # --- Save cleaned dataset ---
-write.csv(subset_f, "out_data/usopen_subset_f_training.csv", row.names = FALSE)
+write.csv(subset_f, "../data/processed/usopen_subset_f_training.csv", row.names = FALSE)
 
 # ------------------- Standardize Selected Columns -------------------
 # Define the columns to standardize
@@ -153,5 +153,5 @@ subset_f <- subset_f %>%
   )
 
 # Save scaled versions
-write.csv(subset_m, "out_data/scaled/usopen_subset_m_training.csv", row.names = FALSE)
-write.csv(subset_f, "out_data/scaled/usopen_subset_f_training.csv", row.names = FALSE)
+write.csv(subset_m, "../data/processed/scaled/usopen_subset_m_training.csv", row.names = FALSE)
+write.csv(subset_f, "../data/processed/scaled/usopen_subset_f_training.csv", row.names = FALSE)

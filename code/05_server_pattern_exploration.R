@@ -7,7 +7,7 @@ library(cluster)
 library(ggpubr)
 
 # --- Load Data ---
-df <- fread("out_data/scaled/wimbledon_subset_m_training.csv")  # Replace with correct path
+df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")  # Replace with correct path
 
 # --- Step 1: Filter & Clean ---
 df_clean <- df %>%

@@ -17,8 +17,8 @@ tournament_label <- case_when(
 year <- 2024 # Change to the desired year
 surface <- ifelse(TOURNAMENT == "wimbledon", "Grass", "Hard")
 importance_file <- ifelse(TOURNAMENT == "wimbledon",
-                          "../data/score_importance_dtmc_grass.csv",
-                          "../data/score_importance_dtmc_hard.csv")
+                          "../data/results/score_importance_dtmc_grass.csv",
+                          "../data/results/score_importance_dtmc_hard.csv")
 
 #--------------------------------------------------------------------------------
 # Helper Functions
@@ -48,7 +48,7 @@ format_player_name <- function(name) {
 #--------------------------------------------------------------------------------
 # Load and preprocess data
 
-file_base <- paste0("out_data/", TOURNAMENT, "_", year, "_combined.csv")
+file_base <- paste0("../data/processed/", TOURNAMENT, "_", year, "_combined.csv")
 data <- fread(file_base) %>%
   mutate(
     P1Score = as.character(P1Score),
@@ -142,5 +142,5 @@ subset_f <- convert_elapsed(subset_f)
 #--------------------------------------------------------------------------------
 # Write output
 
-write.csv(subset_m, paste0("out_data/", TOURNAMENT, "_subset_", year, "_m.csv"), row.names = FALSE)
-write.csv(subset_f, paste0("out_data/", TOURNAMENT, "_subset_", year, "_f.csv"), row.names = FALSE)
+write.csv(subset_m, paste0("../data/processed/", TOURNAMENT, "_subset_", year, "_m.csv"), row.names = FALSE)
+write.csv(subset_f, paste0("../data/processed/", TOURNAMENT, "_subset_", year, "_f.csv"), row.names = FALSE)
