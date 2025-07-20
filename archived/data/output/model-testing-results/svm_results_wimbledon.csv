@@ -1,0 +1,9 @@
+gender,serve_number,speed_variable,test_accuracy,log_loss
+F,1,Speed_MPH,0.65625307,0.64576538
+F,1,speed_ratio,0.65625307,0.635361257
+F,2,Speed_MPH,0.546633607,0.685288392
+F,2,speed_ratio,0.547396529,0.684101733
+M,1,Speed_MPH,0.748956581,0.570783783
+M,1,speed_ratio,0.748956581,0.563896882
+M,2,Speed_MPH,0.575034191,0.682028503
+M,2,speed_ratio,0.575034191,0.681841045

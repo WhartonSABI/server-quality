@@ -1,0 +1,49 @@
+"group","model_type","step","formula","accuracy","log_loss"
+"m_first","Speed_MPH",1,"serving_player_won ~ Speed_MPH",0.7183,0.5909
+"m_first","Speed_MPH",2,"serving_player_won ~ Speed_MPH + p_server_beats_returner",0.718,0.5881
+"m_first","Speed_MPH",3,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed",0.7183,0.5879
+"m_first","Speed_MPH",4,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance",0.7183,0.5856
+"m_first","Speed_MPH",5,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth)",0.7162,0.5759
+"m_first","Speed_MPH",6,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth) + factor(ServeDepth)",0.7172,0.5699
+"m_first","speed_ratio",1,"serving_player_won ~ speed_ratio",0.7183,0.5927
+"m_first","speed_ratio",2,"serving_player_won ~ speed_ratio + p_server_beats_returner",0.7183,0.5895
+"m_first","speed_ratio",3,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed",0.7183,0.59
+"m_first","speed_ratio",4,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance",0.7185,0.5866
+"m_first","speed_ratio",5,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth)",0.7185,0.5739
+"m_first","speed_ratio",6,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth) +     factor(ServeDepth)",0.7189,0.571
+"m_second","Speed_MPH",1,"serving_player_won ~ Speed_MPH",0.5528,0.6876
+"m_second","Speed_MPH",2,"serving_player_won ~ Speed_MPH + p_server_beats_returner",0.5665,0.685
+"m_second","Speed_MPH",3,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed",0.5521,0.6831
+"m_second","Speed_MPH",4,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance",0.5471,0.6805
+"m_second","Speed_MPH",5,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth)",0.5531,0.6755
+"m_second","Speed_MPH",6,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth) + factor(ServeDepth)",0.5554,0.6772
+"m_second","speed_ratio",1,"serving_player_won ~ speed_ratio",0.5558,0.6866
+"m_second","speed_ratio",2,"serving_player_won ~ speed_ratio + p_server_beats_returner",0.5638,0.6831
+"m_second","speed_ratio",3,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed",0.5601,0.6827
+"m_second","speed_ratio",4,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance",0.5618,0.6775
+"m_second","speed_ratio",5,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth)",0.5401,0.679
+"m_second","speed_ratio",6,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth) +     factor(ServeDepth)",0.5655,0.6725
+"f_first","Speed_MPH",1,"serving_player_won ~ Speed_MPH",0.6561,0.6381
+"f_first","Speed_MPH",2,"serving_player_won ~ Speed_MPH + p_server_beats_returner",0.6606,0.636
+"f_first","Speed_MPH",3,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed",0.6572,0.6344
+"f_first","Speed_MPH",4,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance",0.6553,0.6266
+"f_first","Speed_MPH",5,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth)",0.6524,0.6212
+"f_first","Speed_MPH",6,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth) + factor(ServeDepth)",0.6561,0.6217
+"f_first","speed_ratio",1,"serving_player_won ~ speed_ratio",0.6569,0.6412
+"f_first","speed_ratio",2,"serving_player_won ~ speed_ratio + p_server_beats_returner",0.6564,0.6357
+"f_first","speed_ratio",3,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed",0.6581,0.6367
+"f_first","speed_ratio",4,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance",0.6524,0.6376
+"f_first","speed_ratio",5,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth)",0.6462,0.6289
+"f_first","speed_ratio",6,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth) +     factor(ServeDepth)",0.6507,0.6189
+"f_second","Speed_MPH",1,"serving_player_won ~ Speed_MPH",0.5493,0.6881
+"f_second","Speed_MPH",2,"serving_player_won ~ Speed_MPH + p_server_beats_returner",0.5561,0.6814
+"f_second","Speed_MPH",3,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed",0.5524,0.6854
+"f_second","Speed_MPH",4,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance",0.5478,0.6803
+"f_second","Speed_MPH",5,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth)",0.5587,0.6796
+"f_second","Speed_MPH",6,"serving_player_won ~ Speed_MPH + p_server_beats_returner + ElapsedSeconds_fixed +     importance + factor(ServeWidth) + factor(ServeDepth)",0.553,0.6821
+"f_second","speed_ratio",1,"serving_player_won ~ speed_ratio",0.5493,0.6869
+"f_second","speed_ratio",2,"serving_player_won ~ speed_ratio + p_server_beats_returner",0.5374,0.6864
+"f_second","speed_ratio",3,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed",0.5504,0.6872
+"f_second","speed_ratio",4,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance",0.5566,0.6837
+"f_second","speed_ratio",5,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth)",0.5649,0.6784
+"f_second","speed_ratio",6,"serving_player_won ~ speed_ratio + p_server_beats_returner +     ElapsedSeconds_fixed + importance + factor(ServeWidth) +     factor(ServeDepth)",0.5675,0.6807

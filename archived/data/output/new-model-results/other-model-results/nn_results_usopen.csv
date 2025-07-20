@@ -1,0 +1,9 @@
+gender,serve_number,speed_variable,hidden_size,weight_decay,test_accuracy,log_loss
+F,1,Speed_MPH_z,3,0.001,0.653329352,0.625386134
+F,1,speed_ratio_z,5,0.001,0.651836369,0.630178292
+F,2,Speed_MPH_z,3,1.00E-04,0.528232481,0.691562298
+F,2,speed_ratio_z,3,0.001,0.53191098,0.68692914
+M,1,Speed_MPH_z,5,0,0.730624739,0.797579628
+M,1,speed_ratio_z,5,0.001,0.745095311,0.532469507
+M,2,Speed_MPH_z,5,0,0.597810566,0.625291104
+M,2,speed_ratio_z,3,0.001,0.5684198,0.668381133

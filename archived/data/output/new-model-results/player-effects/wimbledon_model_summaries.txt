@@ -1,0 +1,408 @@
+
+==============================
+Model Summary: m_first (Speed_MPH_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + Speed_MPH_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  29465.3   29563.7  -14720.7   29441.3     26839 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.8944 -1.0120  0.4848  0.6149  1.4221 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.01354  0.1164  
+Number of obs: 26851, groups:  server_name, 127
+
+Fixed effects:
+                          Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.62737    0.06902   9.089  < 2e-16 ***
+p_server_beats_returner_z  0.20578    0.01623  12.677  < 2e-16 ***
+Speed_MPH_z                0.50965    0.04256  11.975  < 2e-16 ***
+importance_z               0.27613    0.01536  17.981  < 2e-16 ***
+df_pct_server_z            0.05808    0.01675   3.467 0.000527 ***
+ElapsedSeconds_fixed_z    -0.03483    0.01444  -2.411 0.015891 *  
+factor(ServeWidth)BC      -0.10472    0.07107  -1.473 0.140655    
+factor(ServeWidth)BW       0.02700    0.06759   0.399 0.689553    
+factor(ServeWidth)C        0.55777    0.06416   8.693  < 2e-16 ***
+factor(ServeWidth)W        0.70226    0.06787  10.347  < 2e-16 ***
+factor(ServeDepth)NCTL    -0.32306    0.03539  -9.128  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ S_MPH_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__  0.070                                                                 
+Speed_MPH_z -0.257 -0.026                                                          
+importanc_z  0.025 -0.007  0.033                                                   
+df_pct_srv_  0.037  0.138 -0.058  0.004                                            
+ElpsdScnd__ -0.007 -0.006  0.020  0.010  0.030                                     
+fctr(SrW)BC -0.692 -0.001 -0.079 -0.021 -0.028  0.002                              
+fctr(SrW)BW -0.738 -0.005  0.048 -0.003 -0.031  0.001  0.715                       
+fctr(SrvW)C -0.753  0.002 -0.107 -0.002 -0.013 -0.006  0.766   0.795               
+fctr(SrvW)W -0.878 -0.005  0.114  0.001 -0.024  0.001  0.712   0.750   0.785       
+fct(SD)NCTL -0.416 -0.003  0.040 -0.018 -0.004  0.014  0.014  -0.042  -0.013  0.267
+
+==============================
+Model Summary: m_first (speed_ratio_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + speed_ratio_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  29496.1   29594.5  -14736.1   29472.1     26839 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-3.9586 -1.0135  0.4847  0.6161  1.4064 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.03374  0.1837  
+Number of obs: 26851, groups:  server_name, 127
+
+Fixed effects:
+                          Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.59373    0.07251   8.188 2.66e-16 ***
+p_server_beats_returner_z  0.20837    0.01724  12.085  < 2e-16 ***
+speed_ratio_z              0.49927    0.04878  10.235  < 2e-16 ***
+importance_z               0.27627    0.01537  17.977  < 2e-16 ***
+df_pct_server_z            0.07046    0.01786   3.946 7.95e-05 ***
+ElapsedSeconds_fixed_z    -0.03605    0.01456  -2.476   0.0133 *  
+factor(ServeWidth)BC      -0.10127    0.07125  -1.421   0.1553    
+factor(ServeWidth)BW       0.03426    0.06789   0.505   0.6139    
+factor(ServeWidth)C        0.57286    0.06437   8.899  < 2e-16 ***
+factor(ServeWidth)W        0.71421    0.06855  10.419  < 2e-16 ***
+factor(ServeDepth)NCTL    -0.32425    0.03543  -9.152  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ spd_r_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__  0.083                                                                 
+speed_rat_z -0.330  0.007                                                          
+importanc_z  0.017 -0.003  0.043                                                   
+df_pct_srv_  0.015  0.134  0.004  0.008                                            
+ElpsdScnd__ -0.010  0.005  0.028  0.011  0.030                                     
+fctr(SrW)BC -0.654 -0.005 -0.081 -0.022 -0.030  0.003                              
+fctr(SrW)BW -0.717 -0.004  0.072 -0.001 -0.026  0.003  0.712                       
+fctr(SrvW)C -0.716 -0.001 -0.093 -0.002 -0.019 -0.004  0.767   0.794               
+fctr(SrvW)W -0.857 -0.001  0.156  0.004 -0.016  0.005  0.704   0.751   0.781       
+fct(SD)NCTL -0.400  0.001  0.046 -0.017 -0.004  0.015  0.013  -0.040  -0.013  0.267
+
+==============================
+Model Summary: m_second (Speed_MPH_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + Speed_MPH_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  19404.6   19495.6   -9690.3   19380.6     14525 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.3796 -1.0749  0.6580  0.8845  1.2602 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.001612 0.04015 
+Number of obs: 14537, groups:  server_name, 127
+
+Fixed effects:
+                           Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.575002   0.062943   9.135  < 2e-16 ***
+p_server_beats_returner_z  0.138830   0.017410   7.974 1.53e-15 ***
+Speed_MPH_z                0.221306   0.047845   4.626 3.74e-06 ***
+importance_z               0.291852   0.018482  15.791  < 2e-16 ***
+df_pct_server_z           -0.014668   0.017988  -0.815 0.414823    
+ElapsedSeconds_fixed_z    -0.006076   0.016980  -0.358 0.720490    
+factor(ServeWidth)BC      -0.031158   0.049424  -0.630 0.528413    
+factor(ServeWidth)BW       0.047441   0.050233   0.944 0.344951    
+factor(ServeWidth)C        0.084998   0.055537   1.530 0.125901    
+factor(ServeWidth)W        0.233479   0.069288   3.370 0.000753 ***
+factor(ServeDepth)NCTL    -0.232082   0.053756  -4.317 1.58e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ S_MPH_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__ -0.005                                                                 
+Speed_MPH_z  0.264 -0.069                                                          
+importanc_z  0.049 -0.009 -0.016                                                   
+df_pct_srv_ -0.068  0.137 -0.189  0.000                                            
+ElpsdScnd__  0.008  0.001  0.030  0.003  0.017                                     
+fctr(SrW)BC -0.432  0.020 -0.060 -0.040  0.019 -0.016                              
+fctr(SrW)BW -0.394  0.006  0.065  0.016 -0.025 -0.019  0.522                       
+fctr(SrvW)C -0.411  0.026 -0.162 -0.019  0.019 -0.018  0.487   0.459               
+fctr(SrvW)W -0.584  0.003  0.029 -0.004 -0.008 -0.010  0.377   0.378   0.334       
+fct(SD)NCTL -0.740 -0.013  0.089 -0.022  0.019  0.017 -0.014   0.000  -0.022  0.378
+
+==============================
+Model Summary: m_second (speed_ratio_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + speed_ratio_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+    19400     19491     -9688     19376     14525 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.3522 -1.0739  0.6573  0.8813  1.2804 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.001513 0.03889 
+Number of obs: 14537, groups:  server_name, 127
+
+Fixed effects:
+                           Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.595268   0.063745   9.338  < 2e-16 ***
+p_server_beats_returner_z  0.142971   0.017399   8.217  < 2e-16 ***
+speed_ratio_z              0.267536   0.052309   5.115 3.15e-07 ***
+importance_z               0.291754   0.018482  15.785  < 2e-16 ***
+df_pct_server_z           -0.012057   0.017827  -0.676 0.498840    
+ElapsedSeconds_fixed_z    -0.004694   0.016994  -0.276 0.782398    
+factor(ServeWidth)BC      -0.038841   0.049520  -0.784 0.432838    
+factor(ServeWidth)BW       0.048209   0.050251   0.959 0.337377    
+factor(ServeWidth)C        0.076939   0.055643   1.383 0.166754    
+factor(ServeWidth)W        0.235150   0.069337   3.391 0.000695 ***
+factor(ServeDepth)NCTL    -0.226727   0.053815  -4.213 2.52e-05 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ spd_r_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__  0.012                                                                 
+speed_rat_z  0.298 -0.020                                                          
+importanc_z  0.048 -0.010 -0.015                                                   
+df_pct_srv_ -0.061  0.127 -0.143 -0.002                                            
+ElpsdScnd__  0.014  0.004  0.043  0.003  0.017                                     
+fctr(SrW)BC -0.436  0.016 -0.083 -0.039  0.020 -0.018                              
+fctr(SrW)BW -0.389  0.007  0.062  0.017 -0.022 -0.018  0.520                       
+fctr(SrvW)C -0.415  0.019 -0.173 -0.019  0.013 -0.021  0.490   0.457               
+fctr(SrvW)W -0.577  0.002  0.031 -0.004 -0.007 -0.010  0.376   0.379   0.332       
+fct(SD)NCTL -0.724 -0.008  0.099 -0.022  0.022  0.019 -0.017   0.001  -0.025  0.378
+
+==============================
+Model Summary: f_first (Speed_MPH_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + Speed_MPH_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  20755.6   20848.3  -10365.8   20731.6     16827 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.7053 -1.1304  0.5661  0.7282  1.5806 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.003703 0.06086 
+Number of obs: 16839, groups:  server_name, 115
+
+Fixed effects:
+                          Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.42365    0.06599   6.420 1.36e-10 ***
+p_server_beats_returner_z -0.20853    0.01747 -11.934  < 2e-16 ***
+Speed_MPH_z                0.45452    0.04787   9.494  < 2e-16 ***
+importance_z               0.15909    0.01722   9.236  < 2e-16 ***
+df_pct_server_z            0.06300    0.01795   3.510 0.000448 ***
+ElapsedSeconds_fixed_z    -0.01738    0.01671  -1.040 0.298171    
+factor(ServeWidth)BC      -0.08811    0.06770  -1.302 0.193071    
+factor(ServeWidth)BW       0.11795    0.06521   1.809 0.070501 .  
+factor(ServeWidth)C        0.44801    0.06318   7.091 1.33e-12 ***
+factor(ServeWidth)W        0.58802    0.06842   8.594  < 2e-16 ***
+factor(ServeDepth)NCTL    -0.32289    0.04059  -7.954 1.80e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ S_MPH_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__ -0.062                                                                 
+Speed_MPH_z -0.279  0.053                                                          
+importanc_z  0.015  0.011  0.002                                                   
+df_pct_srv_  0.040 -0.084 -0.059 -0.014                                            
+ElpsdScnd__ -0.018  0.018  0.050  0.017 -0.019                                     
+fctr(SrW)BC -0.645  0.000 -0.110 -0.008  0.003 -0.007                              
+fctr(SrW)BW -0.666  0.014  0.006 -0.004 -0.011  0.002  0.663                       
+fctr(SrvW)C -0.655  0.015 -0.167  0.010  0.001 -0.004  0.706   0.713               
+fctr(SrvW)W -0.809  0.024  0.053 -0.010 -0.009 -0.005  0.639   0.648   0.670       
+fct(SD)NCTL -0.499  0.009  0.067 -0.009 -0.017  0.006  0.026  -0.039  -0.023  0.297
+
+==============================
+Model Summary: f_first (speed_ratio_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + speed_ratio_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  20771.9   20864.7  -10374.0   20747.9     16827 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-2.7223 -1.1320  0.5681  0.7269  1.5635 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.01087  0.1042  
+Number of obs: 16839, groups:  server_name, 115
+
+Fixed effects:
+                          Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.34371    0.07019   4.897 9.74e-07 ***
+p_server_beats_returner_z -0.21820    0.01815 -12.020  < 2e-16 ***
+speed_ratio_z              0.53596    0.06249   8.577  < 2e-16 ***
+importance_z               0.15966    0.01724   9.260  < 2e-16 ***
+df_pct_server_z            0.07719    0.01851   4.171 3.03e-05 ***
+ElapsedSeconds_fixed_z    -0.01886    0.01687  -1.117   0.2638    
+factor(ServeWidth)BC      -0.07478    0.06772  -1.104   0.2695    
+factor(ServeWidth)BW       0.14316    0.06539   2.189   0.0286 *  
+factor(ServeWidth)C        0.47531    0.06312   7.530 5.08e-14 ***
+factor(ServeWidth)W        0.63203    0.06917   9.137  < 2e-16 ***
+factor(ServeDepth)NCTL    -0.32290    0.04064  -7.946 1.93e-15 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ spd_r_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__ -0.053                                                                 
+speed_rat_z -0.408 -0.011                                                          
+importanc_z  0.010  0.007  0.010                                                   
+df_pct_srv_  0.019 -0.070  0.006 -0.013                                            
+ElpsdScnd__ -0.031  0.011  0.067  0.017 -0.004                                     
+fctr(SrW)BC -0.592  0.007 -0.106 -0.008 -0.006 -0.007                              
+fctr(SrW)BW -0.644  0.010  0.050 -0.003 -0.010  0.006  0.658                       
+fctr(SrvW)C -0.605  0.019 -0.136  0.011 -0.011 -0.002  0.705   0.710               
+fctr(SrvW)W -0.794  0.015  0.135 -0.008 -0.004  0.003  0.626   0.649   0.660       
+fct(SD)NCTL -0.482  0.004  0.076 -0.009 -0.011  0.006  0.026  -0.035  -0.023  0.300
+
+==============================
+Model Summary: f_second (Speed_MPH_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + Speed_MPH_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  12510.6   12596.1   -6243.3   12486.6      9137 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.8419 -1.0272  0.7229  0.9422  1.3190 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.00744  0.08625 
+Number of obs: 9149, groups:  server_name, 115
+
+Fixed effects:
+                          Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.32212    0.07283   4.423 9.74e-06 ***
+p_server_beats_returner_z -0.13355    0.02201  -6.067 1.31e-09 ***
+Speed_MPH_z                0.26862    0.06707   4.005 6.21e-05 ***
+importance_z               0.16470    0.02171   7.587 3.27e-14 ***
+df_pct_server_z           -0.02042    0.02292  -0.891  0.37314    
+ElapsedSeconds_fixed_z    -0.02577    0.02174  -1.185  0.23588    
+factor(ServeWidth)BC      -0.04366    0.05908  -0.739  0.45993    
+factor(ServeWidth)BW       0.09020    0.06030   1.496  0.13469    
+factor(ServeWidth)C        0.04763    0.07256   0.656  0.51154    
+factor(ServeWidth)W        0.26150    0.08800   2.972  0.00296 ** 
+factor(ServeDepth)NCTL    -0.18826    0.06255  -3.010  0.00261 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ S_MPH_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__ -0.009                                                                 
+Speed_MPH_z  0.215  0.013                                                          
+importanc_z  0.012 -0.008 -0.034                                                   
+df_pct_srv_ -0.067 -0.082 -0.216  0.005                                            
+ElpsdScnd__  0.028  0.001  0.082  0.009 -0.036                                     
+fctr(SrW)BC -0.469 -0.009 -0.060 -0.023  0.036 -0.016                              
+fctr(SrW)BW -0.420 -0.019  0.013  0.015  0.014 -0.025  0.517                       
+fctr(SrvW)C -0.393 -0.010 -0.140 -0.004  0.028 -0.024  0.440   0.422               
+fctr(SrvW)W -0.555 -0.011  0.015 -0.005 -0.005 -0.016  0.367   0.353   0.297       
+fct(SD)NCTL -0.734  0.007  0.119 -0.011 -0.006  0.022  0.030   0.004   0.001  0.351
+
+==============================
+Model Summary: f_second (speed_ratio_z)
+==============================
+Generalized linear mixed model fit by maximum likelihood (Laplace Approximation) ['glmerMod']
+ Family: binomial  ( logit )
+Formula: serving_player_won ~ p_server_beats_returner_z + speed_ratio_z +  
+    importance_z + df_pct_server_z + ElapsedSeconds_fixed_z +  
+    factor(ServeWidth) + factor(ServeDepth) + (1 | server_name)
+   Data: df
+
+      AIC       BIC    logLik -2*log(L)  df.resid 
+  12509.8   12595.3   -6242.9   12485.8      9137 
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.8180 -1.0279  0.7225  0.9428  1.3351 
+
+Random effects:
+ Groups      Name        Variance Std.Dev.
+ server_name (Intercept) 0.001961 0.04428 
+Number of obs: 9149, groups:  server_name, 115
+
+Fixed effects:
+                          Estimate Std. Error z value Pr(>|z|)    
+(Intercept)                0.33562    0.07286   4.606 4.10e-06 ***
+p_server_beats_returner_z -0.14070    0.02146  -6.558 5.45e-11 ***
+speed_ratio_z              0.29709    0.07049   4.214 2.50e-05 ***
+importance_z               0.16428    0.02169   7.575 3.60e-14 ***
+df_pct_server_z           -0.01353    0.02212  -0.612  0.54074    
+ElapsedSeconds_fixed_z    -0.02543    0.02160  -1.177  0.23911    
+factor(ServeWidth)BC      -0.04422    0.05897  -0.750  0.45336    
+factor(ServeWidth)BW       0.09144    0.06011   1.521  0.12824    
+factor(ServeWidth)C        0.04791    0.07226   0.663  0.50731    
+factor(ServeWidth)W        0.26387    0.08777   3.006  0.00264 ** 
+factor(ServeDepth)NCTL    -0.18733    0.06249  -2.998  0.00272 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Correlation of Fixed Effects:
+            (Intr) p_s___ spd_r_ imprt_ df_p__ ElpS__ f(SW)BC f(SW)BW f(SW)C f(SW)W
+p_srvr_bt__ -0.020                                                                 
+speed_rat_z  0.248 -0.065                                                          
+importanc_z  0.010 -0.005 -0.037                                                   
+df_pct_srv_ -0.054 -0.082 -0.151  0.002                                            
+ElpsdScnd__  0.033 -0.010  0.082  0.010 -0.036                                     
+fctr(SrW)BC -0.470 -0.004 -0.060 -0.023  0.032 -0.016                              
+fctr(SrW)BW -0.419 -0.018  0.016  0.014  0.014 -0.026  0.516                       
+fctr(SrvW)C -0.396  0.005 -0.135 -0.004  0.014 -0.023  0.439   0.421               
+fctr(SrvW)W -0.552 -0.009  0.020 -0.006 -0.006 -0.016  0.366   0.351   0.294       
+fct(SD)NCTL -0.729  0.000  0.120 -0.012  0.002  0.021  0.029   0.005   0.001  0.352
