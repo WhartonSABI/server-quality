@@ -1,9 +1,0 @@
-"group","model_type","accuracy","log_loss"
-"m_first","speed",0.718,0.5717
-"m_first","ratio",0.7174,0.572
-"m_second","speed",0.5344,0.6815
-"m_second","ratio",0.5538,0.6735
-"f_first","speed",0.6527,0.6207
-"f_first","ratio",0.6524,0.6203
-"f_second","speed",0.5597,0.6837
-"f_second","ratio",0.5722,0.6756
