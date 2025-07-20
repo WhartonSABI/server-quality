@@ -5,6 +5,7 @@ library(data.table)
 
 # --- Load and clean data ---
 df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+names(df)
 
 df_clean <- df %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
