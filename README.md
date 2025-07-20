@@ -47,12 +47,11 @@ This repository contains analysis of tennis serving profiles from Grand Slams to
 │               ├── usopen/
 │               └── wimbledon/
 ├── code/
-├──  data/
+└── data/
 │   ├── raw/
 │   ├── processed/
 │   │   ├── scaled/
 │   └── results/
-└── README.md
 ```
 
 ## Data Processing Pipeline
