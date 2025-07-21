@@ -1,12 +1,17 @@
 # --- Setup ---
 rm(list = ls())
+# install.packages("pheatmap")
 library(tidyverse)
 library(data.table)
+library(cluster)
+library(factoextra)
+library(recipes)
+library(pheatmap)
 
-# --- Load and clean data ---
+# --- Load Data ---
 df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
-names(df)
 
+# --- Clean and prepare ---
 df_clean <- df %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -22,114 +27,177 @@ compute_entropy <- function(x) {
     p <- prop.table(table(x))
     -sum(p * log2(p))
 }
-
 get_mode <- function(x) {
     ux <- unique(x)
     ux[which.max(tabulate(match(x, ux)))]
 }
 
-# --- First: compute total serves (for first serve % in calculation) ---
-all_serves <- df_clean %>%
-    distinct(match_id, PointNumber, ServerName)
-
-first_serve_counts <- df_clean %>%
-    filter(ServeNumber == 1) %>%
-    group_by(ServerName) %>%
-    summarise(n_first_serves = n(), .groups = "drop")
-
-total_serves_per_player <- all_serves %>%
-    group_by(ServerName) %>%
-    summarise(n_total_serves = n(), .groups = "drop")
-
-serve_in_df <- left_join(first_serve_counts, total_serves_per_player, by = "ServerName") %>%
-    mutate(pct_in_first = n_first_serves / n_total_serves)
-
-## --- Player-level aggregation by serve type ---
-player_profiles_split <- df_clean %>%
-    group_by(ServerName, ServeNumber) %>%
+df_clean_modal_locations <- df_clean %>% 
+    filter(ServeNumber == 1) %>% 
+    group_by(ServerName) %>% 
     summarise(
-        avg_speed = mean(Speed_MPH, na.rm = TRUE),
-        max_speed = max(Speed_MPH, na.rm = TRUE),
-        win_rate = mean(PointWinner == ServeIndicator, na.rm = TRUE),
-        ace_pct = mean(is_ace, na.rm = TRUE),
-        location_entropy = compute_entropy(location_bin),
         modal_location = get_mode(location_bin),
-        n_serves = n(),
         .groups = 'drop'
-    ) %>%
-    filter(n_serves > 50) %>%
-    mutate(serve_type = ifelse(ServeNumber == 1, "First Serve", "Second Serve")) %>%
-    select(-ServeNumber)
+    )
+unique(df_clean_modal_locations$modal_location)
 
-# --- Split into first and second serve datasets ---
-first_serve_profiles <- player_profiles_split %>%
-    filter(serve_type == "First Serve") %>%
-    select(-serve_type) %>%
-    rename_with(~ paste0("first_", .), -ServerName)
+df_clean_modal_locations2 <- df_clean %>% 
+    filter(ServeNumber == 2) %>% 
+    group_by(ServerName) %>% 
+    summarise(
+        modal_location = get_mode(location_bin),
+        .groups = 'drop'
+    )
+unique(df_clean_modal_locations2$modal_location)
 
-second_serve_profiles <- player_profiles_split %>%
-    filter(serve_type == "Second Serve") %>%
-    select(-serve_type) %>%
-    rename_with(~ paste0("second_", .), -ServerName)
+# --- Create player-level serve profiles ---
+get_serve_profiles <- function(df, serve_number_label) {
+    df %>%
+        filter(ServeNumber == serve_number_label) %>%
+        group_by(ServerName) %>%
+        summarise(
+            avg_speed = mean(Speed_MPH, na.rm = TRUE),
+            sd_speed = sd(Speed_MPH, na.rm = TRUE),
+            win_rate = mean(PointWinner == ServeIndicator, na.rm = TRUE),
+            ace_pct = mean(is_ace, na.rm = TRUE),
+            location_entropy = compute_entropy(location_bin),
+            modal_location = get_mode(location_bin),
+            n_serves = n(),
+            .groups = 'drop'
+        ) %>%
+        filter(n_serves > 50)
+}
 
-# --- Merge in pct_in_first ---
-first_serve_profiles <- first_serve_profiles %>%
-    left_join(serve_in_df %>% select(ServerName, pct_in_first), by = "ServerName")
+# --- Run clustering models and visualizations ---
+run_clustering_models <- function(profiles_df, tag) {
+    # --- One-hot encode modal_location ---
+    recipe_obj <- recipe(~ ., data = profiles_df) %>%
+        update_role(ServerName, new_role = "id") %>%
+        update_role(n_serves, new_role = "id") %>%
+        step_dummy(all_nominal_predictors()) %>%
+        prep()
+    
+    df_encoded <- bake(recipe_obj, new_data = NULL)
+    row_names <- df_encoded$ServerName
+    df_clustering <- df_encoded %>%
+        column_to_rownames("ServerName") %>%
+        select(-n_serves)
+    
+    # Standardize
+    df_scaled <- scale(df_clustering)
+    
+    # Identify modal_location one-hot columns (they start with "modal_location_")
+    modal_cols <- grep("^modal_location_", colnames(df_scaled), value = TRUE)
+    
+    # Down-weight modal location variables (adjust factor as needed)
+    df_scaled[, modal_cols] <- df_scaled[, modal_cols] * 0.75
+    
+    # --------------------
+    # Elbow plot for K
+    # --------------------
+    wss <- map_dbl(1:10, function(k) {
+        kmeans(df_scaled, centers = k, nstart = 20)$tot.withinss
+    })
+    
+    elbow_df <- tibble(k = 1:10, wss = wss)
+    p_elbow <- ggplot(elbow_df, aes(x = k, y = wss)) +
+        geom_line() +
+        geom_point() +
+        theme_minimal() +
+        labs(title = paste("Elbow Plot –", tag),
+             x = "Number of Clusters",
+             y = "Total Within-Cluster Sum of Squares")
+    ggsave(paste0("../data/results/clustering/", tag, "_elbow_plot.png"), p_elbow, 
+           width = 6, height = 4, bg = "white")
+    
+    # --------------------
+    # K-means clustering (k = 4)
+    # --------------------
+    set.seed(123)
+    kmeans_res <- kmeans(df_scaled, centers = 4, nstart = 25)
+    kmeans_labels <- as.factor(kmeans_res$cluster)
+    
+    # Save cluster summary
+    profiles_kmeans <- profiles_df %>%
+        mutate(cluster = kmeans_labels)
+    
+    # --- Modal location proportions per cluster (K-means) ---
+    modal_props_kmeans <- profiles_kmeans %>%
+        group_by(cluster, modal_location) %>%
+        summarise(n = n(), .groups = "drop") %>%
+        group_by(cluster) %>%
+        mutate(prop = n / sum(n)) %>%
+        pivot_wider(names_from = modal_location, values_from = prop, values_fill = 0)
+    
+    write.csv(modal_props_kmeans, paste0("../data/results/clustering/", tag, "_kmeans_modal_location_props.csv"), row.names = FALSE)
+    
+    cluster_summary_kmeans <- profiles_kmeans %>%
+        group_by(cluster) %>%
+        summarise(across(where(is.numeric) & !matches("n_serves"), mean, na.rm = TRUE))
+    write.csv(cluster_summary_kmeans, paste0("../data/results/clustering/", tag, "_kmeans_summary.csv"), row.names = FALSE)
+    
+    # --- PCA plot ---
+    pca_res <- prcomp(df_scaled)
+    pca_df <- as.data.frame(pca_res$x[, 1:2]) %>%
+        mutate(cluster = kmeans_labels, ServerName = row_names)
+    
+    p_pca <- ggplot(pca_df, aes(x = PC1, y = PC2, color = cluster, label = ServerName)) +
+        geom_point(size = 3, alpha = 0.7) +
+        geom_text(size = 2, vjust = 1.5) +
+        theme_minimal() +
+        labs(title = paste("K-means Clustering (PCA Projection) –", tag))
+    ggsave(paste0("../data/results/clustering/", tag, "_kmeans_pca_plot.png"), p_pca, 
+           width = 8, height = 6, dpi = 300, bg = "white")
+    
+    # --- PCA loadings ---
+    pca_loadings <- as.data.frame(pca_res$rotation)
+    write.csv(pca_loadings, paste0("../data/results/clustering/", tag, "_pca_loadings.csv"))
+    
+    # --- Heatmap of raw cluster centers ---
+    cluster_centers_raw <- as.data.frame(kmeans_res$centers)
+    pheatmap(cluster_centers_raw,
+             cluster_rows = TRUE,
+             cluster_cols = TRUE,
+             main = paste("K-means Cluster Centers (Raw Feature Space) –", tag),
+             filename = paste0("../data/results/clustering/", tag, "_kmeans_heatmap.png"),
+             width = 8,
+             height = 6)
+    
+    # --------------------
+    # Hierarchical clustering
+    # --------------------
+    hc_dist <- dist(df_scaled)
+    hc <- hclust(hc_dist, method = "ward.D2")
+    hc_labels <- cutree(hc, k = 4)
+    
+    profiles_hc <- profiles_df %>%
+        mutate(cluster = as.factor(hc_labels))
+    
+    # --- Modal location proportions per cluster (Hierarchical) ---
+    modal_props_hc <- profiles_hc %>%
+        group_by(cluster, modal_location) %>%
+        summarise(n = n(), .groups = "drop") %>%
+        group_by(cluster) %>%
+        mutate(prop = n / sum(n)) %>%
+        pivot_wider(names_from = modal_location, values_from = prop, values_fill = 0)
+    
+    write.csv(modal_props_hc, paste0("../data/results/clustering/", tag, "_hierarchical_modal_location_props.csv"), row.names = FALSE)
+    
+    cluster_summary_hc <- profiles_hc %>%
+        group_by(cluster) %>%
+        summarise(across(where(is.numeric) & !matches("n_serves"), mean, na.rm = TRUE))
+    write.csv(cluster_summary_hc, paste0("../data/results/clustering/", tag, "_hierarchical_summary.csv"), row.names = FALSE)
+    
+    png(paste0("../data/results/clustering/", tag, "_hierarchical_dendrogram.png"), width = 1000, height = 700)
+    plot(hc, labels = row_names, main = paste("Hierarchical Clustering –", tag))
+    rect.hclust(hc, k = 4, border = 2:5)
+    dev.off()
+}
 
-# --- Preview ---
-head(first_serve_profiles)
-head(second_serve_profiles)
+# --- Run for both serve types ---
+first_profiles <- get_serve_profiles(df_clean, 1)
+second_profiles <- get_serve_profiles(df_clean, 2)
 
-#----------------------------------------------
-# clustering
-#----------------------------------------------
-
-# Join first and second serve profiles
-player_profiles <- left_join(first_serve_profiles, second_serve_profiles, by = "ServerName")
-
-# Drop non-numeric columns (e.g., modal_location) and standardize numeric features
-cols_to_cluster <- player_profiles %>%
-    select(-ServerName, -first_modal_location, -second_modal_location, -first_n_serves, -second_n_serves) %>% 
-    drop_na()
-
-cols_scaled <- scale(cols_to_cluster)  # Standardize
-
-wss <- map_dbl(1:10, function(k) {
-    kmeans(cols_scaled, centers = k, nstart = 20)$tot.withinss
-})
-
-# Plot Elbow
-plot(1:10, wss, type = "b", pch = 19, frame = FALSE,
-     xlab = "Number of clusters", ylab = "Total Within-Cluster Sum of Squares",
-     main = "Elbow Method for Choosing k")
-# optimal is prolly 3 or 4 clusters
-
-set.seed(123)
-kmeans_result <- kmeans(cols_scaled, centers = 4, nstart = 25)
-
-# Add cluster labels
-player_profiles_complete <- player_profiles %>% 
-    drop_na()
-player_profiles_complete$cluster <- as.factor(kmeans_result$cluster)
-
-# Run PCA
-pca_res <- prcomp(cols_scaled)
-pca_df <- as.data.frame(pca_res$x[, 1:2]) %>%
-    mutate(cluster = player_profiles_complete$cluster,
-           ServerName = player_profiles_complete$ServerName)
-
-# Plot
-ggplot(pca_df, aes(x = PC1, y = PC2, color = cluster, label = ServerName)) +
-    geom_point(size = 3, alpha = 0.7) +
-    geom_text(size = 2, vjust = 1.5) +
-    theme_minimal() +
-    labs(title = "Serve Profiles Clustering (PCA Projection)--Wimbledon Males, 2021-24")
-ggsave("../data/results/clustering/wimbledon_m_training_kmeans_pca.png", width = 8, height = 6, dpi = 300, bg = "white")
-
-cluster_stats <- player_profiles_complete %>%
-    select(-first_n_serves, -second_n_serves) %>%
-    group_by(cluster) %>%
-    summarise(across(where(is.numeric), mean, na.rm = TRUE))
-
-write.csv(cluster_stats, "../data/results/clustering/wimbledon_m_training_kmeans.csv", row.names = FALSE)
+run_clustering_models(first_profiles, "first_serves")
+run_clustering_models(second_profiles, "second_serves")
 
