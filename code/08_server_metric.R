@@ -12,10 +12,10 @@ library(scales)
 # --- Load Data ---
 df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
 
-# how many aces did john isner serve
-df_isner <- df_clean %>% 
-    filter(ServerName == "John Isner", is_ace == 1) %>%
-    summarise(total_aces = n())
+# # how many aces did john isner serve
+# df_isner <- df_clean %>% 
+#     filter(ServerName == "John Isner", is_ace == 1) %>%
+#     summarise(total_aces = n())
 
 # --- Clean and prepare ---
 df_clean <- df %>%
