@@ -90,7 +90,7 @@ run_clustering_models <- function(profiles_df, tag) {
     modal_cols <- grep("^modal_location_", colnames(df_scaled), value = TRUE)
     
     # Down-weight modal location variables (adjust factor as needed)
-    df_scaled[, modal_cols] <- df_scaled[, modal_cols] * 0.75
+    df_scaled[, modal_cols] <- df_scaled[, modal_cols] * 0.6
     
     # --------------------
     # Elbow plot for K
