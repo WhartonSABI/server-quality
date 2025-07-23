@@ -8,7 +8,7 @@ library(ggrepel)
 library(scales)
 library(ggplot2)
 
-# --- Helper functions ---
+#Functions 
 compute_entropy <- function(x) {
     p <- prop.table(table(x))
     -sum(p * log2(p))
@@ -29,7 +29,7 @@ get_serve_profiles <- function(df, serve_numbers) {
         ) %>%
         filter(n_serves > 20)
 }
-
+#RUNNING ALL MODELS TOGETHER
 run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     set.seed(42)
@@ -89,7 +89,7 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     return(list(profiles = profiles_extended))
 }
 
-# --- Load training data ---
+#TRAINING DATA
 df_train <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -104,7 +104,7 @@ first_results <- run_pipeline_models(df_clean, 1, "../data/results/server_qualit
 second_results <- run_pipeline_models(df_clean, 2, "../data/results/server_quality_models/second_serve")
 combined_results <- run_pipeline_models(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
 
-# --- Load test set ---
+#TESTING DATA
 df_test <- fread("../data/processed/scaled/wimbledon_subset_m_testing.csv")
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -114,7 +114,7 @@ df_test_clean <- df_test %>%
         won_point = PointWinner == ServeIndicator
     )
 
-# --- Evaluation ---
+#Evaluation
 evaluate_model_metric <- function(test_df, model_df, metric_col) {
     df <- test_df %>%
         inner_join(model_df %>% select(ServerName, !!sym(metric_col)), by = "ServerName") %>%
