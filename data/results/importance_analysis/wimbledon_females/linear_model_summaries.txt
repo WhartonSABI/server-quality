@@ -1,0 +1,78 @@
+Regression Summaries:
+
+
+Call:
+lm(formula = avg_speed ~ importance, data = importance_summary)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-1.9340 -0.5792  0.1728  0.6782  1.7362 
+
+Coefficients:
+            Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 96.02306    0.52205 183.933  < 2e-16 ***
+importance  -0.05096    0.01446  -3.524  0.00337 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 1.058 on 14 degrees of freedom
+Multiple R-squared:   0.47,	Adjusted R-squared:  0.4322 
+F-statistic: 12.42 on 1 and 14 DF,  p-value: 0.003373
+
+
+Call:
+lm(formula = sd_speed ~ importance, data = importance_summary)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-1.2511 -0.3042  0.1241  0.3962  0.6269 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept) 10.813227   0.273008  39.608 8.91e-16 ***
+importance   0.002281   0.007563   0.302    0.767    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.5531 on 14 degrees of freedom
+Multiple R-squared:  0.006457,	Adjusted R-squared:  -0.06451 
+F-statistic: 0.09098 on 1 and 14 DF,  p-value: 0.7674
+
+
+Call:
+lm(formula = ace_pct ~ importance, data = importance_summary)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.04547 -0.01814  0.00576  0.01164  0.05657 
+
+Coefficients:
+             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  0.072199   0.013500   5.348 0.000103 ***
+importance  -0.001158   0.000374  -3.095 0.007905 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.02735 on 14 degrees of freedom
+Multiple R-squared:  0.4063,	Adjusted R-squared:  0.3639 
+F-statistic: 9.581 on 1 and 14 DF,  p-value: 0.007905
+
+
+Call:
+lm(formula = location_entropy ~ importance, data = importance_summary)
+
+Residuals:
+     Min       1Q   Median       3Q      Max 
+-0.08363 -0.02606  0.01136  0.02659  0.05190 
+
+Coefficients:
+              Estimate Std. Error t value Pr(>|t|)    
+(Intercept)  2.9962834  0.0208529 143.687   <2e-16 ***
+importance  -0.0006615  0.0005777  -1.145    0.271    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.04225 on 14 degrees of freedom
+Multiple R-squared:  0.08565,	Adjusted R-squared:  0.02034 
+F-statistic: 1.311 on 1 and 14 DF,  p-value: 0.2713
+

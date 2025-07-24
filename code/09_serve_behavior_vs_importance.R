@@ -5,7 +5,7 @@ library(ggrepel)
 library(ggplot2)
 library(scales)
 
-df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+df <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
 
 df_clean <- df %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -31,7 +31,7 @@ get_mode <- function(x) {
 }
 
 #Importance Mapping
-importance_map <- fread("../data/results/score_importance_dtmc_grass.csv") %>%
+importance_map <- fread("../data/results/score_importance_dtmc_hard.csv") %>%
     select(state, importance) %>%
     distinct()
 
