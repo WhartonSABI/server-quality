@@ -8,7 +8,7 @@ library(recipes)
 library(pheatmap)
 
 # --- Load Data ---
-df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+df <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
 
 # --- Clean and prepare ---
 df_clean <- df %>%
@@ -31,7 +31,7 @@ get_mode <- function(x) {
     ux[which.max(tabulate(match(x, ux)))]
 }
 
-# --- Create player-level serve profiles (without win_rate) ---
+# --- Create player-level serve profiles ---
 get_serve_profiles <- function(df, serve_number_label) {
     df %>%
         filter(ServeNumber %in% serve_number_label) %>%
@@ -84,7 +84,7 @@ run_clustering_models <- function(profiles_df, tag) {
     ggsave(paste0("../data/results/clustering/", tag, "_elbow_plot.png"), p_elbow, 
            width = 6, height = 4, bg = "white")
     
-    # K-means clustering
+    # --- K-means Clustering ---
     set.seed(123)
     kmeans_res <- kmeans(df_scaled, centers = 4, nstart = 25)
     kmeans_labels <- as.factor(kmeans_res$cluster)
@@ -102,7 +102,7 @@ run_clustering_models <- function(profiles_df, tag) {
     
     cluster_summary_kmeans <- profiles_kmeans %>%
         group_by(cluster) %>%
-        summarise(across(where(is.numeric) & !matches("n_serves"), mean, na.rm = TRUE))
+        summarise(across(where(is.numeric) & !matches("n_serves"), \(x) mean(x, na.rm = TRUE)))
     write.csv(cluster_summary_kmeans, paste0("../data/results/clustering/", tag, "_kmeans_summary.csv"), row.names = FALSE)
     
     # PCA plot
@@ -122,7 +122,7 @@ run_clustering_models <- function(profiles_df, tag) {
     pca_loadings <- as.data.frame(pca_res$rotation)
     write.csv(pca_loadings, paste0("../data/results/clustering/", tag, "_pca_loadings.csv"))
     
-    # Heatmap of raw cluster centers
+    # Heatmap of cluster centers
     cluster_centers_raw <- as.data.frame(kmeans_res$centers)
     pheatmap(cluster_centers_raw,
              cluster_rows = TRUE,
@@ -132,7 +132,7 @@ run_clustering_models <- function(profiles_df, tag) {
              width = 8,
              height = 6)
     
-    # Hierarchical clustering
+    # --- Hierarchical Clustering (save only outputs) ---
     hc_dist <- dist(df_scaled)
     hc <- hclust(hc_dist, method = "ward.D2")
     hc_labels <- cutree(hc, k = 4)
@@ -150,20 +150,26 @@ run_clustering_models <- function(profiles_df, tag) {
     
     cluster_summary_hc <- profiles_hc %>%
         group_by(cluster) %>%
-        summarise(across(where(is.numeric) & !matches("n_serves"), mean, na.rm = TRUE))
+        summarise(across(where(is.numeric) & !matches("n_serves"), \(x) mean(x, na.rm = TRUE)))
     write.csv(cluster_summary_hc, paste0("../data/results/clustering/", tag, "_hierarchical_summary.csv"), row.names = FALSE)
     
     png(paste0("../data/results/clustering/", tag, "_hierarchical_dendrogram.png"), width = 1000, height = 700)
     plot(hc, labels = row_names, main = paste("Hierarchical Clustering –", tag))
     rect.hclust(hc, k = 4, border = 2:5)
     dev.off()
+    
+    return(profiles_kmeans)
 }
 
-# --- Run for first, second, and combined serve types ---
+# --- Run clustering and save K-means assignments ---
 first_profiles   <- get_serve_profiles(df_clean, 1)
 second_profiles  <- get_serve_profiles(df_clean, 2)
 combined_profiles <- get_serve_profiles(df_clean, c(1, 2))
 
-run_clustering_models(first_profiles, "first_serves")
-run_clustering_models(second_profiles, "second_serves")
-run_clustering_models(combined_profiles, "combined_serves")
+first_profiles_kmeans <- run_clustering_models(first_profiles, "first_serves")
+second_profiles_kmeans <- run_clustering_models(second_profiles, "second_serves")
+combined_profiles_kmeans <- run_clustering_models(combined_profiles, "combined_serves")
+
+write.csv(first_profiles_kmeans, "../data/results/clustering/first_serves_kmeans_cluster_assignments.csv", row.names = FALSE)
+write.csv(second_profiles_kmeans, "../data/results/clustering/second_serves_kmeans_cluster_assignments.csv", row.names = FALSE)
+write.csv(combined_profiles_kmeans, "../data/results/clustering/combined_serves_kmeans_cluster_assignments.csv", row.names = FALSE)
