@@ -1,0 +1,6 @@
+"cor","avg_metric","n","Model","Data"
+-0.259922155892341,0.013242801837538,66,"overperf_lm","combined"
+-0.15893033129922,0.0593215956593712,66,"overperf_glm","combined"
+-0.197084837962814,0.0051175987914521,66,"overperf_rf","combined"
+-0.0679171108240417,5.66514484872046e-05,66,"overperf_xgb","combined"
+0.200015586956926,0.248786693751654,66,"rf_weighted_baseline","combined"

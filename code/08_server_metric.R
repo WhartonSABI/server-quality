@@ -7,6 +7,7 @@ library(randomForest)
 library(ggrepel)
 library(scales)
 library(ggplot2)
+library(xgboost)
 
 # --- Helper Functions ---
 compute_entropy <- function(x) {
@@ -23,6 +24,7 @@ get_serve_profiles <- function(df, serve_numbers) {
             sd_speed = sd(Speed_MPH, na.rm = TRUE),
             location_entropy = compute_entropy(location_bin),
             win_rate = mean(PointWinner == ServeIndicator, na.rm = TRUE),
+            serve_efficiency = mean((PointWinner == ServeIndicator) & (RallyCount <= 3), na.rm = TRUE),
             n_serves = n(),
             .groups = "drop"
         ) %>%
@@ -33,39 +35,48 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     set.seed(42)
     
+    # --- Prepare profiles ---
     profiles <- get_serve_profiles(df_clean, serve_label)
     X <- profiles %>% select(avg_speed, sd_speed, location_entropy)
-    y <- profiles$win_rate
+    y <- profiles$serve_efficiency
+    y_binary <- as.integer(y > median(y, na.rm = TRUE))
     
-    # Standardize for LM and GLM
+    # --- Standardize for linear + logistic ---
     X_scaled <- as.data.frame(scale(X))
-    df_model_scaled <- cbind(win_rate = y, X_scaled) %>% as.data.frame()
+    df_model_scaled <- cbind(serve_efficiency = y, is_above_median = y_binary, X_scaled)
+    df_model <- cbind(serve_efficiency = y, X)
     
-    # Use unscaled for RF
-    df_model <- cbind(win_rate = y, X) %>% as.data.frame()
-    
-    # --- Linear Regression (scaled) ---
-    lm_model <- lm(win_rate ~ ., data = df_model_scaled)
+    # --- Linear Regression ---
+    lm_model <- lm(serve_efficiency ~ ., data = df_model_scaled %>% select(-is_above_median))
     pred_lm <- predict(lm_model, newdata = X_scaled)
     resid_lm <- y - pred_lm
     
-    # --- Logistic Regression (scaled) ---
-    # binary outcome variable of whether serving player's win probability is > 0.5
-    glm_model <- glm(win_rate > 0.5 ~ ., data = df_model_scaled, family = "binomial")
+    # --- Logistic Regression ---
+    glm_model <- glm(is_above_median ~ ., data = df_model_scaled %>% select(-serve_efficiency), family = "binomial")
     pred_glm <- predict(glm_model, newdata = X_scaled, type = "response")
-    resid_glm <- y - pred_glm
+    resid_glm <- y_binary - pred_glm
     
-    # --- Random Forest (unscaled) ---
-    rf_model <- randomForest(win_rate ~ ., data = df_model, importance = TRUE)
+    # --- Random Forest Regression ---
+    rf_model <- randomForest(serve_efficiency ~ ., data = df_model, importance = TRUE)
     pred_rf <- predict(rf_model, newdata = X)
     resid_rf <- y - pred_rf
     
-    # --- Variable Importance and Baseline Score (use scaled X) ---
+    # --- XGBoost Regression ---
+    dtrain <- xgboost::xgb.DMatrix(data = as.matrix(X), label = y)
+    xgb_model <- xgboost::xgboost(
+        data = dtrain,
+        nrounds = 100,
+        objective = "reg:squarederror",
+        verbose = 0
+    )
+    pred_xgb <- predict(xgb_model, newdata = as.matrix(X))
+    resid_xgb <- y - pred_xgb
+    
+    # --- RF Variable Importance ---
     rf_importance <- importance(rf_model, type = 1)
     imp_df <- data.frame(Variable = rownames(rf_importance), Importance = rf_importance[, 1])
     rf_weights <- imp_df$Importance / sum(imp_df$Importance)
     names(rf_weights) <- imp_df$Variable
-    
     baseline_score <- rowSums(t(t(X_scaled) * rf_weights[colnames(X_scaled)]))
     
     ggsave(
@@ -77,14 +88,17 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
         width = 7, height = 5, bg = "white"
     )
     
+    # --- Combine and return ---
     profiles_extended <- profiles %>%
         mutate(
             overperf_lm = resid_lm,
             overperf_glm = resid_glm,
             overperf_rf = resid_rf,
+            overperf_xgb = resid_xgb,
             pred_lm = pred_lm,
             pred_glm = pred_glm,
             pred_rf = pred_rf,
+            pred_xgb = pred_xgb,
             rf_weighted_baseline = baseline_score
         )
     
@@ -93,7 +107,7 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
 }
 
 # --- Load & Prepare Training Data ---
-df_train <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+df_train <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -109,7 +123,7 @@ second_results <- run_pipeline_models(df_clean, 2, "../data/results/server_quali
 combined_results <- run_pipeline_models(df_clean, c(1, 2), "../data/results/server_quality_models/combined")
 
 # --- Load Test Data ---
-df_test <- fread("../data/processed/scaled/wimbledon_subset_m_testing.csv")
+df_test <- fread("../data/processed/scaled/usopen_subset_m_testing.csv")
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
     filter(ServeNumber %in% c(1, 2)) %>%
@@ -126,7 +140,6 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
         summarise(actual_win_rate = mean(won_point), metric_score = first(!!sym(metric_col)), .groups = "drop") %>%
         summarise(
             cor = cor(actual_win_rate, metric_score, use = "complete.obs"),
-            avg_actual = mean(actual_win_rate),
             avg_metric = mean(metric_score),
             n = n()
         )
@@ -134,7 +147,7 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
 }
 
 save_evals <- function(name, model_df) {
-    metrics <- c("overperf_lm", "overperf_glm", "overperf_rf", "rf_weighted_baseline")
+    metrics <- c("overperf_lm", "overperf_glm", "overperf_rf", "overperf_xgb", "rf_weighted_baseline")
     out <- lapply(metrics, function(m) evaluate_model_metric(df_test_clean, model_df, m) %>% mutate(Model = m))
     result <- bind_rows(out) %>% mutate(Data = name)
     write.csv(result, paste0("../data/results/server_quality_models/comparison/test_eval_", name, ".csv"), row.names = FALSE)
@@ -147,7 +160,8 @@ eval_combined <- save_evals("combined", combined_results$profiles)
 
 # --- Scatterplots ---
 plot_scatter <- function(model_df, label) {
-    models <- c("LM" = "overperf_lm", "GLM" = "overperf_glm", "RF" = "overperf_rf", "Baseline" = "rf_weighted_baseline")
+    models <- c("LM" = "overperf_lm", "GLM" = "overperf_glm", "RF" = "overperf_rf",
+                "XGB" = "overperf_xgb", "Baseline" = "rf_weighted_baseline")
     
     scatter_data <- bind_rows(
         imap(models, ~ model_df %>%
@@ -155,18 +169,19 @@ plot_scatter <- function(model_df, label) {
                  group_by(ServerName) %>%
                  summarise(
                      win_rate = mean(won_point),
+                     serve_efficiency = mean((PointWinner == ServeIndicator) & (RallyCount <= 3), na.rm = TRUE),
                      metric_score = first(!!sym(.x)),
                      Model = .y,
                      .groups = "drop"
                  ))
     )
     
-    p <- ggplot(scatter_data, aes(x = metric_score, y = win_rate, color = Model)) +
+    p <- ggplot(scatter_data, aes(x = metric_score, y = serve_efficiency, color = Model)) +
         geom_point(size = 2) +
         geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
         theme_minimal(base_size = 12) +
-        labs(title = paste(label, "- Overperformance vs Actual Win Rate"),
-             x = "Predicted Metric Score", y = "Actual Win Rate")
+        labs(title = paste(label, "- Overperformance vs Serve Efficiency"),
+             x = "Predicted Metric Score", y = "Actual Serve Efficiency")
     
     ggsave(paste0("../data/results/server_quality_models/comparison/scatter_", tolower(label), ".png"),
            p, width = 10, height = 6, bg = "white")
@@ -178,18 +193,19 @@ plot_scatter <- function(model_df, label) {
             group_by(ServerName) %>%
             summarise(
                 win_rate = mean(won_point),
+                serve_efficiency = mean((PointWinner == ServeIndicator) & (RallyCount <= 3), na.rm = TRUE),
                 metric_score = mean(!!sym(var)),
                 label = first(ServerName),
                 .groups = "drop"
             )
         
-        fit <- lm(win_rate ~ metric_score, data = data)
+        fit <- lm(serve_efficiency ~ metric_score, data = data)
         data <- data %>%
             mutate(predicted = predict(fit),
-                   residual = win_rate - predicted,
+                   residual = serve_efficiency - predicted,
                    above_line = residual > 0)
         
-        p_individual <- ggplot(data, aes(x = metric_score, y = win_rate)) +
+        p_individual <- ggplot(data, aes(x = metric_score, y = serve_efficiency)) +
             geom_line(aes(y = predicted), linetype = "dotted", color = "black") +
             geom_point(aes(color = above_line, alpha = abs(residual)), size = 2.5) +
             scale_color_manual(values = c("red", "darkgreen")) +
@@ -197,8 +213,8 @@ plot_scatter <- function(model_df, label) {
                             size = 3, max.overlaps = Inf) +
             theme_minimal(base_size = 12) +
             labs(title = paste(label, "-", m, "Model"),
-                 x = "Predicted Score (Model-Based)",
-                 y = "Actual Win Rate")
+                 x = "Server Quality (Model-Based)",
+                 y = "Actual Serve Efficiency")
         
         ggsave(paste0("../data/results/server_quality_models/comparison/scatter_", tolower(label), "_", tolower(m), ".png"),
                p_individual, width = 9, height = 6, bg = "white")
