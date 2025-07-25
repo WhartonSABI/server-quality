@@ -8,7 +8,7 @@ library(recipes)
 library(pheatmap)
 
 # --- Load Data ---
-df <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
+df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
 
 # --- Clean and prepare ---
 df_clean <- df %>%
@@ -31,7 +31,7 @@ get_mode <- function(x) {
     ux[which.max(tabulate(match(x, ux)))]
 }
 
-# --- Create player-level serve profiles ---
+# --- Create player-level serve profiles (without win_rate) ---
 get_serve_profiles <- function(df, serve_number_label) {
     df %>%
         filter(ServeNumber %in% serve_number_label) %>%
@@ -39,7 +39,6 @@ get_serve_profiles <- function(df, serve_number_label) {
         summarise(
             avg_speed = mean(Speed_MPH, na.rm = TRUE),
             sd_speed = sd(Speed_MPH, na.rm = TRUE),
-            win_rate = mean(PointWinner == ServeIndicator, na.rm = TRUE),
             ace_pct = mean(is_ace, na.rm = TRUE),
             location_entropy = compute_entropy(location_bin),
             modal_location = get_mode(location_bin),
@@ -51,7 +50,7 @@ get_serve_profiles <- function(df, serve_number_label) {
 
 # --- Run clustering models and visualizations ---
 run_clustering_models <- function(profiles_df, tag) {
-    # --- One-hot encode modal_location ---
+    # One-hot encode modal_location
     recipe_obj <- recipe(~ ., data = profiles_df) %>%
         update_role(ServerName, new_role = "id") %>%
         update_role(n_serves, new_role = "id") %>%
@@ -64,32 +63,28 @@ run_clustering_models <- function(profiles_df, tag) {
         column_to_rownames("ServerName") %>%
         select(-n_serves)
     
-    # Standardize
+    # Standardize numeric values
     df_scaled <- scale(df_clustering)
     
-    # Identify modal_location one-hot columns (they start with "modal_location_")
+    # Identify and down-weight modal_location columns
     modal_cols <- grep("^modal_location_", colnames(df_scaled), value = TRUE)
-    
-    # Down-weight modal location variables
     df_scaled[, modal_cols] <- df_scaled[, modal_cols] * 0.6
     
-    # --- Elbow Plot ---
+    # Elbow Plot
     wss <- map_dbl(1:10, function(k) {
         kmeans(df_scaled, centers = k, nstart = 20)$tot.withinss
     })
-    
     elbow_df <- tibble(k = 1:10, wss = wss)
     p_elbow <- ggplot(elbow_df, aes(x = k, y = wss)) +
         geom_line() +
         geom_point() +
         theme_minimal() +
         labs(title = paste("Elbow Plot –", tag),
-             x = "Number of Clusters",
-             y = "Total Within-Cluster Sum of Squares")
+             x = "Number of Clusters", y = "Total Within-Cluster Sum of Squares")
     ggsave(paste0("../data/results/clustering/", tag, "_elbow_plot.png"), p_elbow, 
            width = 6, height = 4, bg = "white")
     
-    # --- K-means Clustering ---
+    # K-means clustering
     set.seed(123)
     kmeans_res <- kmeans(df_scaled, centers = 4, nstart = 25)
     kmeans_labels <- as.factor(kmeans_res$cluster)
@@ -110,7 +105,7 @@ run_clustering_models <- function(profiles_df, tag) {
         summarise(across(where(is.numeric) & !matches("n_serves"), mean, na.rm = TRUE))
     write.csv(cluster_summary_kmeans, paste0("../data/results/clustering/", tag, "_kmeans_summary.csv"), row.names = FALSE)
     
-    # --- PCA plot ---
+    # PCA plot
     pca_res <- prcomp(df_scaled)
     pca_df <- as.data.frame(pca_res$x[, 1:2]) %>%
         mutate(cluster = kmeans_labels, ServerName = row_names)
@@ -123,11 +118,11 @@ run_clustering_models <- function(profiles_df, tag) {
     ggsave(paste0("../data/results/clustering/", tag, "_kmeans_pca_plot.png"), p_pca, 
            width = 8, height = 6, dpi = 300, bg = "white")
     
-    # --- PCA loadings ---
+    # PCA loadings
     pca_loadings <- as.data.frame(pca_res$rotation)
     write.csv(pca_loadings, paste0("../data/results/clustering/", tag, "_pca_loadings.csv"))
     
-    # --- Heatmap of raw cluster centers ---
+    # Heatmap of raw cluster centers
     cluster_centers_raw <- as.data.frame(kmeans_res$centers)
     pheatmap(cluster_centers_raw,
              cluster_rows = TRUE,
@@ -137,7 +132,7 @@ run_clustering_models <- function(profiles_df, tag) {
              width = 8,
              height = 6)
     
-    # --- Hierarchical clustering ---
+    # Hierarchical clustering
     hc_dist <- dist(df_scaled)
     hc <- hclust(hc_dist, method = "ward.D2")
     hc_labels <- cutree(hc, k = 4)
