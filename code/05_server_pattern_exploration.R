@@ -8,7 +8,7 @@ library(recipes)
 library(pheatmap)
 
 # --- Load Data ---
-df <- fread("../data/processed/scaled/wimbledon_subset_m_training.csv")
+df <- fread("../data/processed/scaled/usopen_subset_m_training.csv")
 
 # --- Clean and prepare ---
 df_clean <- df %>%
