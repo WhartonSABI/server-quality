@@ -6,7 +6,7 @@ library(ggplot2)
 
 # --- Config ---
 tournament_gender_tag <- "wimbledon_males"  # wimbledon_males, wimbledon_females, usopen_males, usopen_females
-outcome_type <- "serve_efficiency_outcome"  # serve_efficiency_outcome, win_pct_outcome
+outcome_type <- "win_pct_outcome"  # serve_efficiency_outcome, win_pct_outcome
 
 # --- Paths ---
 base_dir_quality  <- file.path("../data/results/server_quality_models", outcome_type, tournament_gender_tag, "combined")

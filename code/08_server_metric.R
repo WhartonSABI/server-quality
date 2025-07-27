@@ -13,7 +13,7 @@ library(pheatmap)
 library(viridis)
 
 # --- Config ---
-outcome_var <- "serve_efficiency"  # "serve_efficiency" or "win_rate"
+outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
 
 # --- Helper Functions ---
 compute_entropy <- function(x) {
@@ -98,21 +98,21 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     pred_xgb <- xgb_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_xgb <- y - pred_xgb
 
-    rescale <- function(x) {
-        rng <- range(x, na.rm = TRUE)
-        if (diff(rng) == 0) return(rep(0, length(x)))
-        return(2 * (x - rng[1]) / diff(rng) - 1)
+    rescale_signed <- function(x) {
+        max_abs <- max(abs(x), na.rm = TRUE)
+        if (max_abs == 0) return(rep(0, length(x)))
+        return(x / max_abs)  # Range becomes [-1, 1], centered on 0
     }
     
     profiles_extended <- profiles %>%
         mutate(
-            overperf_lm = rescale(resid_lm),
-            overperf_rf = rescale(resid_rf),
-            overperf_xgb = rescale(resid_xgb),
+            overperf_lm = rescale_signed(resid_lm),
+            overperf_rf = rescale_signed(resid_rf),
+            overperf_xgb = rescale_signed(resid_xgb),
             pred_lm = pred_lm,
             pred_rf = pred_rf,
             pred_xgb = pred_xgb,
-            rf_weighted_baseline = rescale(baseline_score)
+            rf_weighted_baseline = rescale_signed(baseline_score)
         )
 
     if (!is.null(rownames(rf_importance))) {
