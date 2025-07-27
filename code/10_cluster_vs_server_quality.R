@@ -5,11 +5,13 @@ library(data.table)
 library(ggplot2)
 
 # --- Config ---
-tournament_gender_tag <- "usopen_males"  # change to: wimbledon_females, usopen_males, usopen_females
+tournament_gender_tag <- "wimbledon_males"  # wimbledon_females, usopen_males, usopen_females
+outcome_type <- "win_pct_outcome"  # serve_efficiency_outcome, win_pct_outcome
 
-base_dir_quality  <- file.path("../data/results/server_quality_models/serve_efficiency_outcome", tournament_gender_tag, "combined")
+# --- Paths ---
+base_dir_quality  <- file.path("../data/results/server_quality_models", outcome_type, tournament_gender_tag, "combined")
 base_dir_cluster  <- file.path("../data/results/clustering", tournament_gender_tag)
-output_dir        <- file.path("../data/results/cluster_vs_quality", tournament_gender_tag)
+output_dir        <- file.path("../data/results/cluster_vs_quality", outcome_type, tournament_gender_tag)
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
 
 # --- Load clustering + quality metrics ---
@@ -25,16 +27,16 @@ df_merged <- profiles_quality %>%
     inner_join(profiles_clusters, by = "ServerName") %>%
     mutate(cluster = as.factor(cluster))
 
-# --- Define overperformance (green vs red dot logic) ---
-model_cols <- c("overperf_lm", "overperf_glm", "overperf_rf", "overperf_xgb")
+# --- Define overperformance categories ---
+model_cols <- c("overperf_lm", "overperf_rf", "overperf_xgb")
 
 overperf_long <- df_merged %>%
-    select(ServerName, cluster, all_of(model_cols)) %>%
+    select(ServerName, cluster, all_of(model_cols), rf_weighted_baseline) %>%
     pivot_longer(cols = all_of(model_cols), names_to = "model", values_to = "residual") %>%
     mutate(performance = case_when(
         residual > 0  ~ "Overperformer",
-        residual < 0 ~ "Underperformer",
-        TRUE                  ~ "Neutral"
+        residual < 0  ~ "Underperformer",
+        TRUE          ~ "Neutral"
     ))
 
 # --- Plot: Proportion of Over/Under/Neutral in each cluster ---
@@ -51,7 +53,8 @@ ggsave(file.path(output_dir, "performance_distribution_by_cluster.png"),
        plot_performance_distribution, width = 10, height = 6, bg = "white")
 
 # --- Summary: average server quality score by cluster ---
-score_cols <- c("overperf_lm", "overperf_glm", "overperf_rf", "overperf_xgb", "rf_weighted_baseline")
+score_cols <- c("overperf_lm", "overperf_rf", "overperf_xgb", "rf_weighted_baseline")
+
 cluster_summary <- df_merged %>%
     group_by(cluster) %>%
     summarise(across(all_of(score_cols), mean, .names = "avg_{.col}"), .groups = "drop")
@@ -70,3 +73,12 @@ boxplot_overperf <- ggplot(overperf_long, aes(x = cluster, y = residual, fill = 
 ggsave(file.path(output_dir, "residuals_by_cluster_boxplot.png"),
        boxplot_overperf, width = 10, height = 6, bg = "white")
 
+# --- Boxplot of rf_weighted_baseline by cluster ---
+boxplot_baseline <- ggplot(df_merged, aes(x = cluster, y = rf_weighted_baseline, fill = cluster)) +
+    geom_boxplot(outlier.shape = NA) +
+    labs(title = "Baseline Server Quality by Cluster",
+         x = "Cluster", y = "RF Weighted Baseline") +
+    theme_minimal()
+
+ggsave(file.path(output_dir, "baseline_by_cluster_boxplot.png"),
+       boxplot_baseline, width = 8, height = 6, bg = "white")
