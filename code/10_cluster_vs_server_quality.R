@@ -3,10 +3,11 @@ rm(list = ls())
 library(tidyverse)
 library(data.table)
 library(ggplot2)
+library(patchwork) # for combining plots
 
 # --- Config ---
 tournament_gender_tag <- "wimbledon_males"  # wimbledon_males, wimbledon_females, usopen_males, usopen_females
-outcome_type <- "win_pct_outcome"  # serve_efficiency_outcome, win_pct_outcome
+outcome_type <- "serve_efficiency_outcome"  # serve_efficiency_outcome, win_pct_outcome
 
 # --- Paths ---
 base_dir_quality  <- file.path("../data/results/server_quality_models", outcome_type, tournament_gender_tag, "combined")
@@ -61,24 +62,48 @@ cluster_summary <- df_merged %>%
 
 write.csv(cluster_summary, file.path(output_dir, "average_quality_by_cluster.csv"), row.names = FALSE)
 
-# --- Boxplot of overperformance by cluster ---
-boxplot_overperf <- ggplot(overperf_long, aes(x = cluster, y = residual, fill = cluster)) +
+
+# --- Compute common y-axis range ---
+combined_y <- c(df_merged$overperf_lm, df_merged$overperf_rf, df_merged$overperf_xgb, df_merged$rf_weighted_baseline)
+y_limits <- range(combined_y, na.rm = TRUE)
+
+# --- Individual overperformance plots ---
+plot_overperf_lm <- ggplot(df_merged, aes(x = cluster, y = overperf_lm, fill = cluster)) +
     geom_boxplot(outlier.shape = NA) +
-    facet_wrap(~ model) +
     geom_hline(yintercept = 0, linetype = "dashed") +
-    labs(title = "Overperformance Residuals by Cluster",
+    coord_cartesian(ylim = y_limits) +
+    labs(title = "Linear Model Overperformance by Cluster",
          x = "Cluster", y = "Residual") +
     theme_minimal()
 
-ggsave(file.path(output_dir, "residuals_by_cluster_boxplot.png"),
-       boxplot_overperf, width = 10, height = 6, bg = "white")
+plot_overperf_rf <- ggplot(df_merged, aes(x = cluster, y = overperf_rf, fill = cluster)) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    coord_cartesian(ylim = y_limits) +
+    labs(title = "Random Forest Overperformance by Cluster",
+         x = "Cluster", y = "Residual") +
+    theme_minimal()
+
+plot_overperf_xgb <- ggplot(df_merged, aes(x = cluster, y = overperf_xgb, fill = cluster)) +
+    geom_boxplot(outlier.shape = NA) +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    coord_cartesian(ylim = y_limits) +
+    labs(title = "XGBoost Overperformance by Cluster",
+         x = "Cluster", y = "Residual") +
+    theme_minimal()
 
 # --- Boxplot of rf_weighted_baseline by cluster ---
-boxplot_baseline <- ggplot(df_merged, aes(x = cluster, y = rf_weighted_baseline, fill = cluster)) +
+plot_baseline <- ggplot(df_merged, aes(x = cluster, y = rf_weighted_baseline, fill = cluster)) +
     geom_boxplot(outlier.shape = NA) +
+    coord_cartesian(ylim = y_limits) +
     labs(title = "Baseline Server Quality by Cluster",
          x = "Cluster", y = "RF Weighted Baseline") +
     theme_minimal()
 
-ggsave(file.path(output_dir, "baseline_by_cluster_boxplot.png"),
-       boxplot_baseline, width = 8, height = 6, bg = "white")
+# --- Combine plots in 2x2 grid ---
+combined_plot <- (plot_overperf_lm | plot_overperf_rf) /
+    (plot_overperf_xgb | plot_baseline)
+
+ggsave(file.path(output_dir, "combined_boxplots_by_cluster_grid.png"),
+       combined_plot, width = 14, height = 12, bg = "white")
+
