@@ -13,7 +13,7 @@ library(pheatmap)
 library(viridis)
 
 # --- Config ---
-outcome_var <- "serve_efficiency"  # "serve_efficiency" or "win_rate"
+outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
 
 # --- Helper Functions ---
 compute_entropy <- function(x) {
