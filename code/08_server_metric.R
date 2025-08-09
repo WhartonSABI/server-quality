@@ -17,7 +17,7 @@ library(broom)
 # --- Config ---
 #-----------------------------
 outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
-gender <- "m"                      # "m" or "f"
+gender <- "f"                      # "m" or "f"
 tournament <- "usopen"          # "wimbledon" or "usopen"
 
 #-----------------------------
@@ -104,26 +104,49 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
     )
 }
 
+# helper function to rescale to [-1, 1]
+rescale_signed <- function(x) {
+    max_abs <- max(abs(x), na.rm = TRUE)
+    if (max_abs == 0) return(rep(0, length(x)))
+    x / max_abs
+}
+
 run_pipeline_models <- function(df_clean, serve_label, output_dir, clusters_df) {
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     set.seed(42)
     
     # --- Build per-server profiles (main effects only) ---
-    profiles <- get_serve_profiles(df_clean, serve_label)  # returns ServerName, outcome, and predictors
+    profiles <- get_serve_profiles(df_clean, c(1, 2))  # returns ServerName, outcome, and predictors
     
-    # --- Merge clusters (lowercased ServerName was already enforced upstream) ---
+    # Merge clusters (lowercased ServerName was already enforced upstream)
     profiles <- profiles %>%
         inner_join(clusters_df %>% select(ServerName, cluster), by = "ServerName")
     
+    # --- Calculate Welo and add to the profiles ---
+    welo_df <- df_clean %>%
+        mutate(welo = if_else(ServeIndicator == 1, player1_avg_welo, player2_avg_welo)) %>%
+        group_by(ServerName) %>%
+        summarise(avg_welo = mean(welo, na.rm = TRUE), .groups = "drop")
+    
+    # Merge Welo columns into profiles
+    profiles <- profiles %>%
+        inner_join(welo_df, by = "ServerName")
+    
+    # --- Scale the Welo column (between -1 and 1 for interpretability) ---
+    profiles <- profiles %>%
+        mutate(
+            avg_welo_scaled = scale(avg_welo)[, 1],  # Scaled version of Welo (normal 0, 1)
+            avg_welo_rescaled = (avg_welo - min(avg_welo, na.rm = TRUE)) / (max(avg_welo, na.rm = TRUE) - min(avg_welo, na.rm = TRUE)) * 2 - 1 # scale to be between [-1, 1]
+        )
+    
     # --- Targets and main-effect predictors ---
     y <- profiles[[outcome_var]]
-    X_main <- profiles %>% select(-ServerName, -all_of(outcome_var))  # includes modal dummies, speeds, entropy, cluster
+    X_main <- profiles %>% select(-c(ServerName, all_of(outcome_var), avg_welo, avg_welo_scaled, avg_welo_rescaled))  # excludes specified columns
     
     # Ensure cluster is a factor
     if (!is.factor(X_main$cluster)) X_main$cluster <- factor(X_main$cluster)
     
     # --- Create interaction-expanded design matrix (cluster * all predictors) ---
-    # This yields cluster main effects + interactions with every predictor
     X_int <- model.matrix(~ cluster * . - 1, data = X_main)  # '-1' to control intercept explicitly via dummies
     
     # --- Scale numeric columns of the design matrix (safe for LM/RF/XGB) ---
@@ -184,7 +207,6 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir, clusters_df) 
     
     # --- Compute RF-weighted average on MAIN effects only (preserves interpretability) ---
     # Use ONLY non-interaction, non-cluster columns from the original (unexpanded) predictors
-    # i.e., columns in X_main except 'cluster'
     X_main_only <- X_main %>% select(-cluster)
     X_main_scaled <- as.data.frame(scale(X_main_only))
     
@@ -233,13 +255,6 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir, clusters_df) 
         labs(title = paste0("XGBoost Variable Importance (", outcome_var, ")"), x = "Variable", y = "Gain") +
         theme_minimal(base_size = 12)
     ggsave(file.path(output_dir, paste0("xgb_importance_", outcome_var, ".png")), xgb_plot, width = 8, height = 6, bg = "white")
-    
-    # helper function to rescale to [-1, 1]
-    rescale_signed <- function(x) {
-        max_abs <- max(abs(x), na.rm = TRUE)
-        if (max_abs == 0) return(rep(0, length(x)))
-        x / max_abs
-    }
     
     # --- Output Combined ---
     profiles_extended <- profiles %>%
@@ -328,20 +343,17 @@ plot_scatter_models <- function(df_test_clean, model_df, df_train_clean, serve_n
         summarise(actual = mean(!!sym(outcome_var), na.rm = TRUE), .groups = "drop")
     
     all_df <- actual_df %>%
-        inner_join(model_df %>% select(ServerName, performance_lm, performance_rf, performance_xgb, weighted_avg), by = "ServerName") %>%
-        inner_join(train_welo_df, by = "ServerName")
-    
+        inner_join(model_df %>% select(ServerName, performance_lm, performance_rf, performance_xgb, weighted_avg, avg_welo_rescaled), by = "ServerName")
     all_df <- all_df %>%
         mutate(
-            actual = scale(actual)[, 1],
-            avg_welo = scale(avg_welo)[, 1]
+            actual = scale(actual)[, 1]
         ) %>%
         rename(
             LM = performance_lm,
             RF = performance_rf,
             XGB = performance_xgb,
             Weighted = weighted_avg,
-            Welo = avg_welo
+            Welo = avg_welo_rescaled
         )
     
     metric_names <- c("LM", "RF", "XGB", "Weighted", "Welo")
@@ -399,7 +411,8 @@ df_clean <- df_train %>%
         is_ace = if_else(ServeIndicator == 1, P1Ace, P2Ace),
         win_rate = PointWinner == ServeIndicator,
         serve_efficiency = (PointWinner == ServeIndicator) & (RallyCount <= 3)
-    )
+    ) %>% 
+    drop_na()
 
 df_test_clean <- df_test %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -409,7 +422,8 @@ df_test_clean <- df_test %>%
         ServerName = tolower(if_else(ServeIndicator == 1, player1, player2)),
         win_rate = PointWinner == ServeIndicator,
         serve_efficiency = (PointWinner == ServeIndicator) & (RallyCount <= 3)
-    )
+    ) %>% 
+    drop_na()
 
 #-----------------------------
 # --- Run Models and Save Results ---
