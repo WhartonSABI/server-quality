@@ -34,6 +34,11 @@ dir.create(importance_dir, recursive = TRUE, showWarnings = FALSE)
 train_path <- file.path("../data/processed/scaled", paste0(tournament, "_subset_", gender, "_training.csv"))
 test_path  <- file.path("../data/processed/scaled", paste0(tournament, "_subset_", gender, "_testing.csv"))
 
+get_cluster_path <- function(tournament, gender) {
+    tg <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
+    file.path("../data/results/clustering", tg, paste0(tg, "_combined_kmeans_cluster_assignments.csv"))
+}
+
 #-----------------------------
 # --- Helper Functions ---
 #-----------------------------
@@ -99,42 +104,71 @@ evaluate_model_metric <- function(test_df, model_df, metric_col) {
     )
 }
 
-run_pipeline_models <- function(df_clean, serve_label, output_dir) {
+run_pipeline_models <- function(df_clean, serve_label, output_dir, clusters_df) {
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     set.seed(42)
     
-    profiles <- get_serve_profiles(df_clean, serve_label)
-    y <- profiles[[outcome_var]]
-    X <- profiles %>% select(-ServerName, -all_of(outcome_var))
+    # --- Build per-server profiles (main effects only) ---
+    profiles <- get_serve_profiles(df_clean, serve_label)  # returns ServerName, outcome, and predictors
     
-    X_scaled <- scale(X)
-    df_model_scaled <- data.frame(X_scaled)
+    # --- Merge clusters (lowercased ServerName was already enforced upstream) ---
+    profiles <- profiles %>%
+        inner_join(clusters_df %>% select(ServerName, cluster), by = "ServerName")
+    
+    # --- Targets and main-effect predictors ---
+    y <- profiles[[outcome_var]]
+    X_main <- profiles %>% select(-ServerName, -all_of(outcome_var))  # includes modal dummies, speeds, entropy, cluster
+    
+    # Ensure cluster is a factor
+    if (!is.factor(X_main$cluster)) X_main$cluster <- factor(X_main$cluster)
+    
+    # --- Create interaction-expanded design matrix (cluster * all predictors) ---
+    # This yields cluster main effects + interactions with every predictor
+    X_int <- model.matrix(~ cluster * . - 1, data = X_main)  # '-1' to control intercept explicitly via dummies
+    
+    # --- Scale numeric columns of the design matrix (safe for LM/RF/XGB) ---
+    X_int_scaled <- scale(X_int)
+    
+    # --- Modeling frame for caret ---
+    df_model_scaled <- data.frame(X_int_scaled)
     df_model_scaled[[outcome_var]] <- y
     df_model_scaled <- df_model_scaled %>% relocate(all_of(outcome_var))
     
+    # --- CV control ---
     cv_ctrl <- trainControl(method = "cv", number = 5, savePredictions = "final")
     
-    # --- Linear Model ---
-    lm_model <- train(reformulate(colnames(X), response = outcome_var), data = df_model_scaled, method = "lm", trControl = cv_ctrl)
-    pred_lm <- lm_model$pred %>% arrange(rowIndex) %>% pull(pred)
+    # --- Linear Model with interactions already in columns ---
+    lm_model <- train(
+        reformulate(colnames(df_model_scaled)[-1], response = outcome_var),
+        data = df_model_scaled,
+        method = "lm",
+        trControl = cv_ctrl
+    )
+    pred_lm  <- lm_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_lm <- y - pred_lm
-    std_pred_lm <- scale(pred_lm)[,1]
+    std_pred_lm  <- scale(pred_lm)[,1]
     std_resid_lm <- scale(resid_lm)[,1]
     performance_lm <- std_pred_lm + std_resid_lm
     
     # Save LM coefficients
-    tidy_lm <- tidy(lm_model$finalModel)
+    tidy_lm <- broom::tidy(lm_model$finalModel)
     write.csv(tidy_lm, file.path(output_dir, paste0("lm_coefficients_", outcome_var, ".csv")), row.names = FALSE)
     
-    # --- Random Forest Model ---
-    rf_model <- train(reformulate(colnames(X), response = outcome_var), data = df_model_scaled, method = "rf", importance = TRUE, trControl = cv_ctrl)
-    pred_rf <- rf_model$pred %>% arrange(rowIndex) %>% pull(pred)
+    # --- Random Forest on the same interaction-expanded matrix ---
+    rf_model <- train(
+        reformulate(colnames(df_model_scaled)[-1], response = outcome_var),
+        data = df_model_scaled,
+        method = "rf",
+        importance = TRUE,
+        trControl = cv_ctrl
+    )
+    pred_rf  <- rf_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_rf <- y - pred_rf
-    std_pred_rf <- scale(pred_rf)[,1]
+    std_pred_rf  <- scale(pred_rf)[,1]
     std_resid_rf <- scale(resid_rf)[,1]
     performance_rf <- std_pred_rf + std_resid_rf
     
-    # RF importance
+    # RF importance (now includes interaction features like "cluster2:avg_speed")
     rf_importance <- varImp(rf_model)$importance %>%
         rownames_to_column(var = "Variable") %>%
         arrange(desc(Overall))
@@ -143,30 +177,54 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
     rf_plot <- ggplot(rf_importance, aes(x = reorder(Variable, Overall), y = Overall)) +
         geom_col(fill = "steelblue") +
         coord_flip() +
-        labs(title = paste0("Random Forest Variable Importance (", outcome_var, ")"), x = "Variable", y = "Importance") +
+        labs(title = paste0("Random Forest Variable Importance (", outcome_var, ")"),
+             x = "Variable", y = "Importance") +
         theme_minimal(base_size = 12)
     ggsave(file.path(output_dir, paste0("rf_importance_", outcome_var, ".png")), rf_plot, width = 8, height = 6, bg = "white")
     
-    # Compute RF-weighted average
-    rf_weights <- rf_importance$Overall
-    names(rf_weights) <- rf_importance$Variable
-    rf_weights <- rf_weights / sum(rf_weights, na.rm = TRUE)
-    common_vars <- intersect(names(rf_weights), colnames(X))
-    weighted_avg <- rowSums(t(t(X[, common_vars, drop = FALSE]) * rf_weights[common_vars]))
+    # --- Compute RF-weighted average on MAIN effects only (preserves interpretability) ---
+    # Use ONLY non-interaction, non-cluster columns from the original (unexpanded) predictors
+    # i.e., columns in X_main except 'cluster'
+    X_main_only <- X_main %>% select(-cluster)
+    X_main_scaled <- as.data.frame(scale(X_main_only))
     
-    # --- XGBoost Model ---
+    # Build a "main-effect-only" RF to derive weights OR reuse importance from the big RF but restrict to main effects.
+    rf_main <- train(
+        reformulate(colnames(X_main_scaled), response = outcome_var),
+        data = cbind(setNames(list(y), outcome_var), X_main_scaled),
+        method = "rf",
+        importance = TRUE,
+        trControl = cv_ctrl
+    )
+    
+    rf_main_imp <- varImp(rf_main)$importance %>%
+        rownames_to_column(var = "Variable") %>%
+        arrange(desc(Overall))
+    rf_weights <- rf_main_imp$Overall
+    names(rf_weights) <- rf_main_imp$Variable
+    rf_weights <- rf_weights / sum(rf_weights, na.rm = TRUE)
+    common_vars <- intersect(names(rf_weights), colnames(X_main_scaled))
+    weighted_avg <- rowSums(t(t(as.matrix(X_main_scaled[, common_vars, drop = FALSE])) * rf_weights[common_vars]))
+    
+    # --- XGBoost on the same interaction-expanded matrix ---
     xgb_grid <- expand.grid(nrounds = 100, max_depth = 3, eta = 0.1, gamma = 0,
                             colsample_bytree = 1, min_child_weight = 1, subsample = 1)
-    xgb_model <- train(reformulate(colnames(X), response = outcome_var), data = df_model_scaled, method = "xgbTree",
-                       tuneGrid = xgb_grid, trControl = cv_ctrl, verbose = 0)
-    pred_xgb <- xgb_model$pred %>% arrange(rowIndex) %>% pull(pred)
+    xgb_model <- train(
+        reformulate(colnames(df_model_scaled)[-1], response = outcome_var),
+        data = df_model_scaled,
+        method = "xgbTree",
+        tuneGrid = xgb_grid,
+        trControl = cv_ctrl,
+        verbose = 0
+    )
+    pred_xgb  <- xgb_model$pred %>% arrange(rowIndex) %>% pull(pred)
     resid_xgb <- y - pred_xgb
-    std_pred_xgb <- scale(pred_xgb)[,1]
+    std_pred_xgb  <- scale(pred_xgb)[,1]
     std_resid_xgb <- scale(resid_xgb)[,1]
     performance_xgb <- std_pred_xgb + std_resid_xgb
     
-    # Save XGBoost importance
-    xgb_imp <- xgb.importance(model = xgb_model$finalModel)
+    # Save XGBoost importance (feature names = design matrix columns)
+    xgb_imp <- xgb.importance(feature_names = colnames(df_model_scaled)[-1], model = xgb_model$finalModel)
     write.csv(xgb_imp, file.path(output_dir, paste0("xgb_importance_", outcome_var, ".csv")), row.names = FALSE)
     
     xgb_plot <- ggplot(xgb_imp, aes(x = reorder(Feature, Gain), y = Gain)) +
@@ -176,18 +234,18 @@ run_pipeline_models <- function(df_clean, serve_label, output_dir) {
         theme_minimal(base_size = 12)
     ggsave(file.path(output_dir, paste0("xgb_importance_", outcome_var, ".png")), xgb_plot, width = 8, height = 6, bg = "white")
     
-    # helper function to scale metrics between -1 and 1 (for interpretability)
+    # helper function to rescale to [-1, 1]
     rescale_signed <- function(x) {
         max_abs <- max(abs(x), na.rm = TRUE)
         if (max_abs == 0) return(rep(0, length(x)))
-        return(x / max_abs)
+        x / max_abs
     }
     
     # --- Output Combined ---
     profiles_extended <- profiles %>%
         mutate(
-            performance_lm = rescale_signed(performance_lm),
-            performance_rf = rescale_signed(performance_rf),
+            performance_lm  = rescale_signed(performance_lm),
+            performance_rf  = rescale_signed(performance_rf),
             performance_xgb = rescale_signed(performance_xgb),
             pred_lm = pred_lm,
             pred_rf = pred_rf,
@@ -322,6 +380,14 @@ plot_scatter_models <- function(df_test_clean, model_df, df_train_clean, serve_n
 df_train <- fread(train_path)
 df_test <- fread(test_path)
 
+# load clusters
+cluster_path <- get_cluster_path(tournament, gender)
+clusters_df <- fread(cluster_path) %>%
+    mutate(
+        ServerName = tolower(ServerName),
+        cluster = factor(cluster)   # ensure categorical (levels "1","2","3","4")
+    )
+
 # --- Preprocess ---
 df_clean <- df_train %>%
     filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
@@ -348,9 +414,9 @@ df_test_clean <- df_test %>%
 #-----------------------------
 # --- Run Models and Save Results ---
 #-----------------------------
-first_results    <- run_pipeline_models(df_clean, 1, file.path(base_dir, "first_serve"))
-second_results   <- run_pipeline_models(df_clean, 2, file.path(base_dir, "second_serve"))
-combined_results <- run_pipeline_models(df_clean, c(1, 2), file.path(base_dir, "combined"))
+first_results    <- run_pipeline_models(df_clean, 1, file.path(base_dir, "first_serve"),  clusters_df)
+second_results   <- run_pipeline_models(df_clean, 2, file.path(base_dir, "second_serve"), clusters_df)
+combined_results <- run_pipeline_models(df_clean, c(1, 2), file.path(base_dir, "combined"), clusters_df)
 
 eval_first    <- save_evals("first", first_results$profiles, df_test_clean, df_clean, 1)
 eval_second   <- save_evals("second", second_results$profiles, df_test_clean, df_clean, 2)
