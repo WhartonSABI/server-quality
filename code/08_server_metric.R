@@ -16,7 +16,7 @@ library(broom)
 #-----------------------------
 # --- Config ---
 #-----------------------------
-outcome_var <- "serve_efficiency"  # "serve_efficiency" or "win_rate"
+outcome_var <- "win_rate"  # "serve_efficiency" or "win_rate"
 gender <- "f"                      # "m" or "f"
 tournament <- "usopen"          # "wimbledon" or "usopen"
 
