@@ -64,7 +64,7 @@ get_serve_profiles <- function(df, serve_numbers) {
             n_serves = n(),
             .groups = "drop"
         ) %>%
-        filter(n_serves > 20)
+        filter(n_serves > 50)
     
     modal_dummies <- model.matrix(~ modal_location - 1, data = serve_stats) %>% as.data.frame()
     modal_scaled <- as.data.frame(scale(modal_dummies))
