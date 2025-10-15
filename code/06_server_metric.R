@@ -62,4 +62,4 @@ get_serve_profiles <- function(df, serve_number_label) {
 # --- get serve profiles ---
 serve1_profiles <- get_serve_profiles(df_clean, serve_number_label = 1)
 serve2_profiles <- get_serve_profiles(df_clean, serve_number_label = 2)
-both_serve_profiles <- get_serve_profiles(df_clean, serve_number_label = c(1, 2))
+
