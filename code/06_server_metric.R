@@ -156,3 +156,157 @@ build_sqs <- function(model, profiles_z) {
 sqs_first  <- build_sqs(m1, serve1_profiles_z)
 sqs_second <- build_sqs(m2, serve2_profiles_z)
 
+# combine server quality scores (Sqs's) by weighted average based on number of first & second serves
+# --- bring serve counts onto the SQS tables ---
+sqs_first_w <- sqs_first %>%
+  left_join(serve1_profiles %>% select(ServerName, n_serves_1 = n_serves), by = "ServerName")
+
+sqs_second_w <- sqs_second %>%
+  left_join(serve2_profiles %>% select(ServerName, n_serves_2 = n_serves), by = "ServerName")
+
+### combine on log odds scale
+sqs_combined <- full_join(
+  sqs_first_w  %>% rename(
+    SQS_logodds_1st     = SQS_logodds,
+    MeasuredSkill_1st   = MeasuredSkill,
+    UnmeasuredCraft_1st = UnmeasuredCraft
+  ),
+  sqs_second_w %>% rename(
+    SQS_logodds_2nd     = SQS_logodds,
+    MeasuredSkill_2nd   = MeasuredSkill,
+    UnmeasuredCraft_2nd = UnmeasuredCraft
+  ),
+  by = "ServerName"
+) %>%
+  mutate(
+    w1 = coalesce(n_serves_1, 0),
+    w2 = coalesce(n_serves_2, 0),
+    
+    # Weighted average (fallback to whichever exists if the other is 0)
+    SQS_logodds_combined =
+      dplyr::case_when(
+        w1 > 0 & w2 == 0 ~ SQS_logodds_1st,
+        w2 > 0 & w1 == 0 ~ SQS_logodds_2nd,
+        TRUE ~ (w1 * SQS_logodds_1st + w2 * SQS_logodds_2nd) / (w1 + w2)
+      )
+  )
+
+# convert to probability scale
+sqs_combined <- sqs_combined %>%
+  mutate(SQS_prob_combined = plogis(SQS_logodds_combined))
+
+################################
+### out of sample testing
+################################
+
+# --- Load testing data and clean identically ---
+df_test <- fread(testing_path)
+
+df_test_clean <- df_test %>%
+  filter(!is.na(ServeWidth), !is.na(ServeDepth), ServeWidth != "", ServeDepth != "") %>%
+  filter(ServeNumber %in% c(1, 2)) %>%
+  mutate(
+    ServerName  = tolower(ifelse(ServeIndicator == 1, player1, player2)),
+    server_won  = as.integer(ifelse(ServeIndicator == 1, PointWinner == 1, PointWinner == 2)),
+    rally_le3   = if_else(RallyCount <= 3, 1L, 0L)
+  )
+
+# --- Aggregate test outcomes per server (all serves combined) ---
+test_outcomes <- df_test_clean %>%
+  group_by(ServerName) %>%
+  summarise(
+    n_serves_test         = n(),
+    wins_total            = sum(server_won, na.rm = TRUE),
+    wins_rally_le3        = sum(server_won * rally_le3, na.rm = TRUE),
+    win_pct_test          = wins_total / n_serves_test,
+    serve_efficiency_test = wins_rally_le3 / n_serves_test,
+    .groups = "drop"
+  )
+
+# --- Join training-based predictions (SQS_prob_combined) to test outcomes ---
+eval_df <- sqs_combined %>%
+  select(ServerName, SQS_prob_combined) %>%
+  inner_join(test_outcomes, by = "ServerName") %>%
+  mutate(
+    pred = SQS_prob_combined,
+    obs_eff = serve_efficiency_test,
+    obs_win = win_pct_test
+  )
+
+# --- Metric helpers ---
+rmse_fun <- function(pred, obs) {
+  sqrt(mean((pred - obs)^2, na.rm = TRUE))
+}
+
+corr_row <- function(pred, obs, outcome_name) {
+  # Guard: need at least 3 paired non-NA points for cor.test
+  keep <- is.finite(pred) & is.finite(obs)
+  if (sum(keep) < 3) {
+    tibble(
+      outcome    = outcome_name,
+      n_players  = sum(keep),
+      rmse       = NA_real_,
+      cor        = NA_real_,
+      p_value    = NA_real_
+    )
+  } else {
+    ct <- suppressWarnings(cor.test(pred[keep], obs[keep], method = "pearson"))
+    tibble(
+      outcome    = outcome_name,
+      n_players  = sum(keep),
+      rmse       = rmse_fun(pred[keep], obs[keep]),
+      cor        = unname(ct$estimate),
+      p_value    = ct$p.value
+    )
+  }
+}
+
+# --- Compute metrics for both outcomes ---
+metrics_eff <- corr_row(eval_df$pred, eval_df$obs_eff, "serve_efficiency")
+metrics_win <- corr_row(eval_df$pred, eval_df$obs_win,  "win_percentage")
+
+metrics_out <- bind_rows(metrics_eff, metrics_win)
+
+summary(eval_df$obs_eff)
+sd(eval_df$obs_eff) # 0.09292598
+
+summary(eval_df$obs_win)
+sd(eval_df$obs_win) # 0.08372838
+
+# --- Save to CSV ---
+metrics_path <- file.path(output_dir, paste0(tag_prefix, "_glmm_oos_metrics.csv"))
+write_csv(metrics_out, metrics_path)
+
+### scsatterplots
+# --- Serve efficiency plot ---
+p_eff <- ggplot(eval_df, aes(x = SQS_prob_combined, y = serve_efficiency_test)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, color = "blue", linetype = "dashed") +
+  labs(
+    title = "Server Quality (Training) vs Serve Efficiency (Testing)",
+    x = "Predicted Server Quality (SQS_prob_combined)",
+    y = "Serve Efficiency (Proportion of Serve Points Won with Rally ≤ 3)"
+  ) +
+  theme_minimal(base_size = 13)
+
+# --- Win percentage plot ---
+p_win <- ggplot(eval_df, aes(x = SQS_prob_combined, y = win_pct_test)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, color = "darkgreen", linetype = "dashed") +
+  labs(
+    title = "Server Quality (Training) vs Win Percentage (Testing)",
+    x = "Predicted Server Quality (SQS_prob_combined)",
+    y = "Win Percentage (Proportion of Serve Points Won)"
+  ) +
+  theme_minimal(base_size = 13)
+
+# --- Save plots ---
+ggsave(file.path(output_dir, paste0(tag_prefix, "_SQS_vs_efficiency.png")),
+       p_eff, width = 7, height = 5, dpi = 300)
+ggsave(file.path(output_dir, paste0(tag_prefix, "_SQS_vs_winpct.png")),
+       p_win, width = 7, height = 5, dpi = 300)
+
+############################
+### out of sample testing using baselines
+############################
+
