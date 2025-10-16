@@ -9,7 +9,7 @@ library(pheatmap)
 library(lme4)
 
 # --- Config ---
-tournament <- "wimbledon"  # "wimbledon" or "usopen"
+tournament <- "usopen"  # "wimbledon" or "usopen"
 gender <- "m"              # "m" or "f"
 tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 
