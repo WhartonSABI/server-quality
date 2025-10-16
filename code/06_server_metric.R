@@ -227,6 +227,7 @@ test_outcomes <- df_test_clean %>%
 eval_df <- sqs_combined %>%
   select(ServerName, SQS_prob_combined) %>%
   inner_join(test_outcomes, by = "ServerName") %>%
+  filter(n_serves_test > 20) %>%
   mutate(
     pred = SQS_prob_combined,
     obs_eff = serve_efficiency_test,
@@ -268,10 +269,10 @@ metrics_win <- corr_row(eval_df$pred, eval_df$obs_win,  "win_percentage")
 metrics_out <- bind_rows(metrics_eff, metrics_win)
 
 summary(eval_df$obs_eff)
-sd(eval_df$obs_eff) # 0.09292598
+sd(eval_df$obs_eff) # 0.08016931
 
 summary(eval_df$obs_win)
-sd(eval_df$obs_win) # 0.08372838
+sd(eval_df$obs_win) # 0.06604993
 
 # --- Save to CSV ---
 metrics_path <- file.path(output_dir, paste0(tag_prefix, "_glmm_oos_metrics.csv"))
@@ -285,7 +286,7 @@ p_eff <- ggplot(eval_df, aes(x = SQS_prob_combined, y = serve_efficiency_test)) 
   labs(
     title = "Server Quality (Training) vs Serve Efficiency (Testing)",
     x = "Predicted Server Quality (SQS_prob_combined)",
-    y = "Serve Efficiency (Proportion of Serve Points Won with Rally ≤ 3)"
+    y = "Serve Efficiency (Prop. of Serve Points Won w/ Rally ≤ 3)"
   ) +
   theme_minimal(base_size = 13)
 
@@ -302,11 +303,86 @@ p_win <- ggplot(eval_df, aes(x = SQS_prob_combined, y = win_pct_test)) +
 
 # --- Save plots ---
 ggsave(file.path(output_dir, paste0(tag_prefix, "_SQS_vs_efficiency.png")),
-       p_eff, width = 7, height = 5, dpi = 300)
+       p_eff, width = 7, height = 5, dpi = 300, bg = "white")
 ggsave(file.path(output_dir, paste0(tag_prefix, "_SQS_vs_winpct.png")),
-       p_win, width = 7, height = 5, dpi = 300)
+       p_win, width = 7, height = 5, dpi = 300, bg = "white")
 
 ############################
-### out of sample testing using baselines
+### compare to baselines' out of sample testing
 ############################
 
+### using simple stats as baseline: ace percentage, and average serve speed
+simple_baseline <- df_test_clean %>%
+  mutate(
+    is_ace = ifelse(ServeIndicator == 1, P1Ace, P2Ace),
+  ) %>%
+  group_by(ServerName) %>%
+  summarise(
+    avg_speed_test  = mean(Speed_MPH, na.rm = TRUE),
+    n_serves_test   = n(),
+    .groups = "drop"
+  )
+
+# welo
+welo_baseline <- df_test_clean %>%
+  mutate(
+    welo_value = ifelse(ServeIndicator == 1, player1_avg_welo, player2_avg_welo)
+  ) %>%
+  group_by(ServerName) %>%
+  summarise(
+    welo_mean_test = mean(welo_value, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# merge baselines with test outcomes
+baseline_eval <- test_outcomes %>%
+  left_join(simple_baseline, by = "ServerName") %>%
+  left_join(welo_baseline,  by = "ServerName") %>%
+  left_join(sqs_combined %>% select(ServerName, SQS_prob_combined), by = "ServerName") %>% 
+  filter(n_serves_test.x > 20)
+
+# --- Z-score standardization helper ---
+zscore <- function(x) {
+  if (is.numeric(x)) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE) else x
+}
+
+# --- Standardize everything (within baseline_eval) ---
+baseline_eval_std <- baseline_eval %>%
+  mutate(
+    SQS_prob_combined_z  = zscore(SQS_prob_combined),
+    avg_speed_test_z     = zscore(avg_speed_test),
+    welo_mean_test_z     = zscore(welo_mean_test),
+    serve_efficiency_z   = zscore(serve_efficiency_test),
+    win_pct_z            = zscore(win_pct_test)
+  )
+
+# --- Metric helpers ---
+rmse_fun <- function(pred, obs) sqrt(mean((pred - obs)^2, na.rm = TRUE))
+corr_stats <- function(pred, obs, name_pred, name_outcome) {
+  keep <- is.finite(pred) & is.finite(obs)
+  if (sum(keep) < 3) return(tibble(
+    predictor = name_pred, outcome = name_outcome,
+    n = sum(keep), rmse = NA_real_, cor = NA_real_, p_value = NA_real_
+  ))
+  ct <- suppressWarnings(cor.test(pred[keep], obs[keep], method = "pearson"))
+  tibble(
+    predictor = name_pred, outcome = name_outcome, n = sum(keep),
+    rmse = rmse_fun(pred[keep], obs[keep]),
+    cor  = unname(ct$estimate), p_value = ct$p.value
+  )
+}
+
+# --- Evaluate each predictor vs standardized outcomes ---
+metrics_list <- list(
+  corr_stats(baseline_eval_std$SQS_prob_combined_z, baseline_eval_std$serve_efficiency_z, "SQS_prob", "serve_efficiency"),
+  corr_stats(baseline_eval_std$SQS_prob_combined_z, baseline_eval_std$win_pct_z,          "SQS_prob", "win_pct"),
+  corr_stats(baseline_eval_std$avg_speed_test_z,    baseline_eval_std$serve_efficiency_z, "avg_speed", "serve_efficiency"),
+  corr_stats(baseline_eval_std$avg_speed_test_z,    baseline_eval_std$win_pct_z,          "avg_speed", "win_pct"),
+  corr_stats(baseline_eval_std$welo_mean_test_z,    baseline_eval_std$serve_efficiency_z, "welo", "serve_efficiency"),
+  corr_stats(baseline_eval_std$welo_mean_test_z,    baseline_eval_std$win_pct_z,          "welo", "win_pct")
+)
+
+metrics_baselines_std <- bind_rows(metrics_list)
+
+baseline_path <- file.path(output_dir, paste0(tag_prefix, "_baseline_comparison.csv"))
+write_csv(metrics_baselines_std, baseline_path)
