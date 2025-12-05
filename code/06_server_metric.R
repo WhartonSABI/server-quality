@@ -10,10 +10,11 @@ library(lme4)
 # install.packages("webshot2")
 library(kableExtra)
 library(webshot2)
+library(htmltools)
 
 # --- Config ---
 tournament <- "usopen"  # "wimbledon" or "usopen"
-gender <- "m"              # "m" or "f"
+gender <- "f"              # "m" or "f"
 tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 
 # --- Paths ---
@@ -214,10 +215,18 @@ top_n <- 25
 top_sqs <- sqs_combined %>%
   slice_head(n = top_n) %>%
   select(ServerName, SQS_prob_combined)
-png(file.path(output_dir, paste0(tag_prefix, "_top_", top_n, "_servers.png")),
-    width = 800, height = 600)
-grid.table(top_sqs)
-dev.off()
+
+# HTML table (temporary)
+html_file <- file.path(output_dir, paste0(tag_prefix, "_top_", top_n, "_servers.html"))
+
+top_sqs %>%
+  kbl(format = "html", col.names = c("Server", "Serve Quality Score (Probability Scale)")) %>%
+  kable_classic(full_width = FALSE, html_font = "Calibri") %>%
+  save_kable(html_file)
+
+# screenshot HTML to PNG
+png_file <- file.path(output_dir, paste0(tag_prefix, "_top_", top_n, "_servers.png"))
+webshot(html_file, png_file, vwidth = 1000, vheight = 1200, zoom = 2)
 
 ################################
 ### out of sample testing
