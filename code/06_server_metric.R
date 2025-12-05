@@ -14,7 +14,7 @@ library(htmltools)
 
 # --- Config ---
 tournament <- "usopen"  # "wimbledon" or "usopen"
-gender <- "f"              # "m" or "f"
+gender <- "m"              # "m" or "f"
 tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 
 # --- Paths ---
@@ -211,16 +211,109 @@ path <- file.path(output_dir, paste0(tag_prefix, "_metrics.csv"))
 write.csv(sqs_combined, path)
 
 # save top 25 servers as image for display
+names(sqs_combined)
 top_n <- 25
 top_sqs <- sqs_combined %>%
   slice_head(n = top_n) %>%
-  select(ServerName, SQS_prob_combined)
+  select(ServerName, SQS_prob_combined) 
+
+# lowercase names for matching
+top_sqs <- top_sqs %>%
+  mutate(server_lower = tolower(ServerName))
+
+serve1_profiles <- serve1_profiles %>%
+  mutate(server_lower = tolower(ServerName))
+
+serve2_profiles <- serve2_profiles %>%
+  mutate(server_lower = tolower(ServerName))
+
+# include avg speed, entropy, modal location for first and second serves by lowercase servername
+names(serve1_profiles)
+
+top_sqs <- top_sqs %>%
+  left_join(serve1_profiles %>%
+              select(server_lower, avg_speed_1st = avg_speed,
+                     sd_speed_1st = sd_speed,
+                     location_entropy_1st = location_entropy,
+                     modal_location_1st = modal_location,
+                     n_serves_1 = n_serves),
+            by = "server_lower") %>%
+  left_join(serve2_profiles %>%
+              select(server_lower, avg_speed_2nd = avg_speed,
+                     sd_speed_2nd = sd_speed,
+                     location_entropy_2nd = location_entropy,
+                     modal_location_2nd = modal_location,
+                     n_serves_2 = n_serves),
+            by = "server_lower") %>%
+  mutate(
+    avg_speed_1st = round(avg_speed_1st, 2),
+    location_entropy_1st = round(location_entropy_1st, 2),
+    avg_speed_2nd = round(avg_speed_2nd, 2),
+    location_entropy_2nd = round(location_entropy_2nd, 2),
+    sd_speed_1st = round(sd_speed_1st, 2),
+    sd_speed_2nd = round(sd_speed_2nd, 2)
+  )
+
+# convert modal locations to character (body, body/center, body/wide, center, wide; and close to line/not close to line)
+decode_width <- function(code) {
+  if (is.na(code)) return(NA_character_)
+  
+  # part before "_", e.g. "WC", "WBW", "WBC"
+  prefix <- strsplit(code, "_", fixed = TRUE)[[1]][1]
+  # ignore first "W"
+  width_code <- substring(prefix, 2)
+  
+  dplyr::case_when(
+    width_code == "B"  ~ "Body",
+    width_code == "BC" ~ "Body/center",
+    width_code == "BW" ~ "Body/wide",
+    width_code == "C"  ~ "Center",
+    width_code == "W"  ~ "Wide",
+    TRUE ~ NA_character_
+  )
+}
+
+decode_depth <- function(code) {
+  if (is.na(code)) return(NA_character_)
+  
+  # part after "_", e.g. "DNCTL", "DCTL"
+  suffix <- strsplit(code, "_", fixed = TRUE)[[1]][2]
+  # ignore first letter "D"
+  depth_code <- substring(suffix, 2)
+  
+  dplyr::case_when(
+    depth_code == "NCTL" ~ "Not close to line",
+    depth_code == "CTL"  ~ "Close to line",
+    TRUE ~ NA_character_
+  )
+}
+
+decode_modal_location <- function(code) {
+  if (is.na(code)) return(NA_character_)
+  
+  width <- decode_width(code)
+  depth <- decode_depth(code)
+  
+  paste0(width, ", ", tolower(depth))
+}
+
+top_sqs <- top_sqs %>%
+  mutate(
+    modal_location_1st = sapply(modal_location_1st, decode_modal_location),
+    modal_location_2nd = sapply(modal_location_2nd, decode_modal_location)
+  ) %>% 
+  select(-server_lower)
+
+names(top_sqs)
 
 # HTML table (temporary)
 html_file <- file.path(output_dir, paste0(tag_prefix, "_top_", top_n, "_servers.html"))
 
 top_sqs %>%
-  kbl(format = "html", col.names = c("Server", "Serve Quality Score (Probability Scale)")) %>%
+  kbl(format = "html", col.names = c("Server", "Serve Quality Score (Probability Scale)",
+                                     "Avg Speed (1st)", "SD Speed (1st)", "Location Entropy (1st)", "Modal Location (1st)",
+                                     "Number of 1st Serves", "Avg Speed (2nd)", "SD Speed (2nd)", "Location Entropy (2nd)",
+                                     "Modal Location (2nd)", "Number of 2nd Serves")) %>%
   kable_classic(full_width = FALSE, html_font = "Calibri") %>%
   save_kable(html_file)
 
