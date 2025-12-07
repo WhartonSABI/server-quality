@@ -341,6 +341,10 @@ df_test_clean <- df_test %>%
     rally_le3   = if_else(RallyCount <= 3, 1L, 0L)
   )
 
+# make ServerName capitalized for joining (initially lowercased to prevent differenecs in capitalizing middle names, etc.)
+df_test_clean <- df_test_clean %>%
+  mutate(ServerName = str_to_title(ServerName))
+
 # --- Aggregate test outcomes per server (all serves combined) ---
 test_outcomes <- df_test_clean %>%
   group_by(ServerName) %>%
@@ -399,10 +403,10 @@ metrics_win <- corr_row(eval_df$pred, eval_df$obs_win,  "win_percentage")
 metrics_out <- bind_rows(metrics_eff, metrics_win)
 
 summary(eval_df$obs_eff)
-sd(eval_df$obs_eff) # 0.08016931
+sd(eval_df$obs_eff) # 0.08455495
 
 summary(eval_df$obs_win)
-sd(eval_df$obs_win) # 0.06604993
+sd(eval_df$obs_win) # 0.06537004
 
 # --- Save to CSV ---
 metrics_path <- file.path(output_dir, paste0(tag_prefix, "_glmm_oos_metrics.csv"))
@@ -534,7 +538,6 @@ eval_by_serve_type <- function(serve_num,
       serve_eff_type       = wins_rally_le3_type / n_serves_test_type,
       
       # Baselines (per serve type)
-      avg_speed_type       = mean(Speed_MPH, na.rm = TRUE),
       welo_mean_type       = mean(welo_value, na.rm = TRUE),
       .groups = "drop"
     ) %>%
@@ -549,7 +552,6 @@ eval_by_serve_type <- function(serve_num,
   eval_std <- eval_df %>%
     mutate(
       SQS_prob_z      = zscore(SQS_prob),
-      speed_z         = zscore(avg_speed_type),
       welo_z          = zscore(welo_mean_type),
       eff_z           = zscore(serve_eff_type),
       win_z           = zscore(win_pct_type)
@@ -574,12 +576,10 @@ eval_by_serve_type <- function(serve_num,
   metrics <- bind_rows(
     # vs serve efficiency
     corr_stats(eval_std$SQS_prob_z, eval_std$eff_z,  paste0("SQS_", tag_label), "serve_efficiency"),
-    corr_stats(eval_std$speed_z,    eval_std$eff_z,  paste0("avg_speed_", tag_label), "serve_efficiency"),
     corr_stats(eval_std$welo_z,     eval_std$eff_z,  "welo", "serve_efficiency"),
     
     # vs win %
     corr_stats(eval_std$SQS_prob_z, eval_std$win_z,  paste0("SQS_", tag_label), "win_pct"),
-    corr_stats(eval_std$speed_z,    eval_std$win_z,  paste0("avg_speed_", tag_label), "win_pct"),
     corr_stats(eval_std$welo_z,     eval_std$win_z,  "welo", "win_pct")
   ) %>%
     mutate(serve_type = tag_label)
@@ -590,6 +590,11 @@ eval_by_serve_type <- function(serve_num,
 }
 
 # --- Run for first and second serves ---
+sqs_first <- sqs_first %>%
+  mutate(ServerName = str_to_title(ServerName))
+sqs_second <- sqs_second %>%
+  mutate(ServerName = str_to_title(ServerName))
+
 metrics_first  <- eval_by_serve_type(serve_num = 1, sqs_tbl = sqs_first,  tag_label = "first")
 metrics_first
 metrics_second <- eval_by_serve_type(serve_num = 2, sqs_tbl = sqs_second, tag_label = "second")
