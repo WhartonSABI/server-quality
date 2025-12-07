@@ -14,7 +14,7 @@ library(htmltools)
 
 # --- Config ---
 tournament <- "usopen"  # "wimbledon" or "usopen"
-gender <- "m"              # "m" or "f"
+gender <- "f"              # "m" or "f"
 tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 
 # --- Paths ---
@@ -323,7 +323,7 @@ top_sqs %>%
 
 # screenshot HTML to PNG
 png_file <- file.path(output_dir, paste0(tag_prefix, "_top_", top_n, "_servers.png"))
-webshot(html_file, png_file, vwidth = 1000, vheight = 1200, zoom = 2)
+webshot(html_file, png_file, vwidth = 1600, vheight = 1000, zoom = 2)
 
 ################################
 ### out of sample testing
