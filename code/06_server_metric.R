@@ -36,7 +36,8 @@ df_clean <- df %>%
         ServerName = tolower(ifelse(ServeIndicator == 1, player1, player2)),
         is_ace = ifelse(ServeIndicator == 1, P1Ace, P2Ace),
         is_df = ifelse(ServeIndicator == 1, P1DoubleFault, P2DoubleFault),
-        server_won = as.integer(ifelse(ServeIndicator == 1, PointWinner == 1, PointWinner == 2))
+        server_won = as.integer(ifelse(ServeIndicator == 1, PointWinner == 1, PointWinner == 2)),
+        is_efficient = as.integer(server_won & (RallyCount <= 3))
     )
 
 # --- Helper functions ---
@@ -91,13 +92,13 @@ m1_df <- df_clean %>%
   filter(ServeNumber == 1) %>%
   inner_join(serve1_profiles_z %>% select(ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location),
              by = "ServerName") %>%
-  select(server_won, ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
+  select(server_won, is_efficient, ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
 
 m2_df <- df_clean %>%
   filter(ServeNumber == 2) %>%
   inner_join(serve2_profiles_z %>% select(ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location),
              by = "ServerName") %>%
-  select(server_won, ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
+  select(server_won, is_efficient, ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
 
 ############################
 ### Fit GLMMS, random intercept by server name
@@ -105,14 +106,14 @@ m2_df <- df_clean %>%
 
 # First serves
 m1 <- glmer(
-  server_won ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location + (1 | ServerName),
+  is_efficient ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location + (1 | ServerName),
   data = m1_df,
   family = binomial()
 )
 
 # Second serves
 m2 <- glmer(
-  server_won ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location + (1 | ServerName),
+  is_efficient ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location + (1 | ServerName),
   data = m2_df,
   family = binomial()
 )
@@ -212,10 +213,13 @@ write.csv(sqs_combined, path)
 
 # save top 25 servers as image for display
 names(sqs_combined)
+sqs_combined <- sqs_combined %>% 
+  drop_na()
 top_n <- 25
 top_sqs <- sqs_combined %>%
   slice_head(n = top_n) %>%
-  select(ServerName, SQS_prob_combined) 
+  select(ServerName, SQS_prob_combined) %>% 
+  drop_na()
 
 # lowercase names for matching
 top_sqs <- top_sqs %>%
