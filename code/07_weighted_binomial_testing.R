@@ -3,7 +3,7 @@ library(tidyverse)
 library(data.table)
 
 # --- Config ---
-tournament <- "usopen"  # "wimbledon" or "usopen"
+tournament <- "wimbledon"  # "wimbledon" or "usopen"
 gender <- "m"              # "m" or "f"
 tag_prefix <- paste0(tournament, "_", ifelse(gender == "m", "males", "females"))
 
@@ -139,6 +139,12 @@ run_eval_for_serve_type <- function(st = c("all", "first", "second")) {
       welo_z = zscore(welo_mean_test)
     )
   
+  eval_df <- eval_df %>%
+    mutate(
+      win_pct_test  = wins_total / n_serves_test,
+      eff_test      = wins_rally_le3 / n_serves_test
+    )
+  
   # --- models ---
   # win%
   m_win_sqs <- glm(cbind(wins_total, n_serves_test - wins_total) ~ SQS_z,
@@ -151,6 +157,24 @@ run_eval_for_serve_type <- function(st = c("all", "first", "second")) {
                    family = binomial, data = eval_df)
   m_eff_welo <- glm(cbind(wins_rally_le3, n_serves_test - wins_rally_le3) ~ welo_z,
                     family = binomial, data = eval_df)
+  
+  # --- correlations ---
+  cor_results <- tibble(
+    model = c(
+      paste0("win_sqs_", st),
+      paste0("win_welo_", st),
+      paste0("eff_sqs_", st),
+      paste0("eff_welo_", st)
+    ),
+    term = c("SQS_z", "welo_z", "SQS_z", "welo_z"),
+    correlation = c(
+      cor(eval_df$SQS_z,  eval_df$win_pct_test, use = "complete.obs"),
+      cor(eval_df$welo_z, eval_df$win_pct_test, use = "complete.obs"),
+      cor(eval_df$SQS_z,  eval_df$eff_test,     use = "complete.obs"),
+      cor(eval_df$welo_z, eval_df$eff_test,     use = "complete.obs")
+    ),
+    serve_type = st
+  )
   
   # --- tidy coefficient extraction ---
   extract_coefs <- function(model, model_name) {
@@ -169,6 +193,9 @@ run_eval_for_serve_type <- function(st = c("all", "first", "second")) {
   ) %>%
     mutate(serve_type = st)
   
+  results <- results %>%
+    left_join(cor_results, by = c("model", "term", "serve_type"))
+  
   return(results)
 }
 
@@ -176,8 +203,7 @@ run_eval_for_serve_type <- function(st = c("all", "first", "second")) {
 results_all_types <- map_dfr(c("all", "first", "second"), run_eval_for_serve_type)
 
 # Save to CSV
-write.csv(
-  results_all_types,
-  file = file.path(output_dir, paste0(tag_prefix, "_weighted_binomial_results_by_serve_type.csv")),
-  row.names = FALSE
+write.csv(results_all_types, 
+          file = file.path(output_dir, paste0(tag_prefix, "_weighted_binomial_results_by_serve_type.csv")),
+          row.names = FALSE
 )
