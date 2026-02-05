@@ -2,9 +2,6 @@ rm(list = ls())
 library(tidyverse)
 library(data.table)
 library(lme4)
-library(kableExtra)
-library(webshot2)
-library(htmltools)
 
 tournaments <- c("wimb", "us")
 genders <- c("men", "women")
@@ -112,48 +109,6 @@ decode_modal_location <- function(code) {
   paste0(width, ", ", tolower(depth))
 }
 
-save_top_table <- function(sqs_tbl, serve_profiles, out_dir, serve_label) {
-  top_n <- 10
-
-  top_sqs <- sqs_tbl %>%
-    arrange(desc(SQS_prob)) %>%
-    slice_head(n = top_n) %>%
-    select(ServerName, SQS_prob) %>%
-    mutate(server_lower = tolower(ServerName))
-
-  serve_profiles <- serve_profiles %>%
-    mutate(server_lower = tolower(ServerName))
-
-  top_sqs <- top_sqs %>%
-    left_join(serve_profiles %>%
-                select(server_lower,
-                       avg_speed = avg_speed,
-                       sd_speed = sd_speed,
-                       location_entropy = location_entropy,
-                       modal_location = modal_location,
-                       n_serves = n_serves),
-              by = "server_lower") %>%
-    mutate(
-      avg_speed = round(avg_speed, 2),
-      sd_speed = round(sd_speed, 2),
-      location_entropy = round(location_entropy, 2),
-      modal_location = sapply(modal_location, decode_modal_location)
-    ) %>%
-    select(-server_lower)
-
-  html_file <- file.path(out_dir, paste0(serve_label, ".html"))
-
-  top_sqs %>%
-    kbl(format = "html", col.names = c("Server", "Serve Quality Score (Probability Scale)",
-                                       "Avg Speed", "SD Speed", "Location Entropy",
-                                       "Modal Location", "Number of Serves")) %>%
-    kable_classic(full_width = FALSE, html_font = "Calibri") %>%
-    save_kable(html_file)
-
-  png_file <- file.path(out_dir, paste0(serve_label, ".png"))
-  webshot(html_file, png_file, vwidth = 1800, vheight = 1000, zoom = 2)
-}
-
 eval_by_serve_type <- function(df_test_clean, sqs_tbl, out_dir, serve_num, tag_label) {
   preds <- sqs_tbl %>%
     transmute(ServerName, SQS_prob = plogis(SQS_logodds))
@@ -237,6 +192,7 @@ process_tournament_gender <- function(tournament, gender) {
     mutate(
       location_bin = paste0("W", ServeWidth, "_D", ServeDepth),
       ServerName = tolower(ifelse(ServeIndicator == 1, player1, player2)),
+      ReturnerName = tolower(ifelse(ServeIndicator == 1, player2, player1)),
       is_ace = ifelse(ServeIndicator == 1, P1Ace, P2Ace),
       is_df = ifelse(ServeIndicator == 1, P1DoubleFault, P2DoubleFault),
       server_won = as.integer(ifelse(ServeIndicator == 1, PointWinner == 1, PointWinner == 2)),
@@ -253,22 +209,26 @@ process_tournament_gender <- function(tournament, gender) {
     filter(ServeNumber == 1) %>%
     inner_join(serve1_profiles_z %>% select(ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location),
                by = "ServerName") %>%
-    select(server_won, is_efficient, ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
+    select(server_won, is_efficient, ServerName, ReturnerName,
+           avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
 
   m2_df <- df_clean %>%
     filter(ServeNumber == 2) %>%
     inner_join(serve2_profiles_z %>% select(ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location),
                by = "ServerName") %>%
-    select(server_won, is_efficient, ServerName, avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
+    select(server_won, is_efficient, ServerName, ReturnerName,
+           avg_speed_z, sd_speed_z, location_entropy_z, modal_location)
 
   m1 <- glmer(
-    is_efficient ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location + (1 | ServerName),
+    is_efficient ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location +
+      (1 | ServerName) + (1 | ReturnerName),
     data = m1_df,
     family = binomial()
   )
 
   m2 <- glmer(
-    is_efficient ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location + (1 | ServerName),
+    is_efficient ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location +
+      (1 | ServerName) + (1 | ReturnerName),
     data = m2_df,
     family = binomial()
   )
@@ -285,9 +245,6 @@ process_tournament_gender <- function(tournament, gender) {
 
   write.csv(sqs_first_out, file.path(rankings_dir, "first.csv"), row.names = FALSE)
   write.csv(sqs_second_out, file.path(rankings_dir, "second.csv"), row.names = FALSE)
-
-  save_top_table(sqs_first_out, serve1_profiles, rankings_dir, "first")
-  save_top_table(sqs_second_out, serve2_profiles, rankings_dir, "second")
 
   df_test <- fread(testing_path)
   df_test_clean <- df_test %>%
