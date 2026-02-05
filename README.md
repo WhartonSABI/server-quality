@@ -20,12 +20,12 @@ This is the code and data for “A Unified Server Quality Metric for Tennis,” 
 │   │   ├── subset/
 │   │   └── splits/
 │   └── results/
-│       └── importance/
+│       ├── importance/
+│       └── {us_men,us_women,wimb_men,wimb_women}/
+│           ├── evaluation/
+│           └── rankings/
 ├── paper/
-│   └── main.pdf
 ├── presentations/
-│   ├── cmsac2025.pdf
-│   └── lab.pdf
 └── serving.Rproj
 ```
 
