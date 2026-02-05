@@ -111,7 +111,7 @@ decode_modal_location <- function(code) {
 
 eval_by_serve_type <- function(df_test_clean, sqs_tbl, out_dir, serve_num, tag_label) {
   preds <- sqs_tbl %>%
-    transmute(ServerName, SQS_prob = plogis(SQS_logodds))
+    select(ServerName, SQS_logodds)
 
   test_type <- df_test_clean %>%
     filter(ServeNumber == serve_num) %>%
@@ -134,7 +134,7 @@ eval_by_serve_type <- function(df_test_clean, sqs_tbl, out_dir, serve_num, tag_l
   zscore <- function(x) if (is.numeric(x)) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE) else x
   eval_std <- eval_df %>%
     mutate(
-      SQS_prob_z      = zscore(SQS_prob),
+      SQS_logodds_z   = zscore(SQS_logodds),
       welo_z          = zscore(welo_mean_type),
       eff_z           = zscore(serve_eff_type),
       win_z           = zscore(win_pct_type)
@@ -156,9 +156,9 @@ eval_by_serve_type <- function(df_test_clean, sqs_tbl, out_dir, serve_num, tag_l
   }
 
   metrics <- bind_rows(
-    corr_stats(eval_std$SQS_prob_z, eval_std$eff_z,  paste0("SQS_", tag_label), "serve_efficiency"),
+    corr_stats(eval_std$SQS_logodds_z, eval_std$eff_z,  paste0("SQS_", tag_label), "serve_efficiency"),
     corr_stats(eval_std$welo_z,     eval_std$eff_z,  "welo", "serve_efficiency"),
-    corr_stats(eval_std$SQS_prob_z, eval_std$win_z,  paste0("SQS_", tag_label), "win_pct"),
+    corr_stats(eval_std$SQS_logodds_z, eval_std$win_z,  paste0("SQS_", tag_label), "win_pct"),
     corr_stats(eval_std$welo_z,     eval_std$win_z,  "welo", "win_pct")
   ) %>%
     mutate(serve_type = tag_label)
@@ -237,11 +237,11 @@ process_tournament_gender <- function(tournament, gender) {
   sqs_second <- build_sqs(m2, serve2_profiles_z)
 
   sqs_first_out <- sqs_first %>%
-    mutate(SQS_prob = plogis(SQS_logodds), ServerName = str_to_title(ServerName)) %>%
-    arrange(desc(SQS_prob))
+    mutate(ServerName = str_to_title(ServerName)) %>%
+    arrange(desc(SQS_logodds))
   sqs_second_out <- sqs_second %>%
-    mutate(SQS_prob = plogis(SQS_logodds), ServerName = str_to_title(ServerName)) %>%
-    arrange(desc(SQS_prob))
+    mutate(ServerName = str_to_title(ServerName)) %>%
+    arrange(desc(SQS_logodds))
 
   write.csv(sqs_first_out, file.path(rankings_dir, "first.csv"), row.names = FALSE)
   write.csv(sqs_second_out, file.path(rankings_dir, "second.csv"), row.names = FALSE)

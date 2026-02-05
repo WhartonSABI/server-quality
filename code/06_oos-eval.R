@@ -32,15 +32,15 @@ run_eval_for_serve_type <- function(df_test_clean, df_sqs, st = c("first", "seco
     group_by(ServerName) %>%
     summarise(welo_mean_test = mean(welo_value, na.rm = TRUE), .groups = "drop")
 
-  sqs_col <- ifelse(st == "first", "SQS_prob_first", "SQS_prob_second")
+  sqs_col <- ifelse(st == "first", "SQS_logodds_first", "SQS_logodds_second")
 
   eval_df <- outcomes %>%
     left_join(welo_baseline, by = "ServerName") %>%
     left_join(df_sqs %>% select(ServerName, all_of(sqs_col)), by = "ServerName") %>%
-    rename(SQS_prob = all_of(sqs_col)) %>%
-    filter(!is.na(SQS_prob), !is.na(welo_mean_test)) %>%
+    rename(SQS_logodds = all_of(sqs_col)) %>%
+    filter(!is.na(SQS_logodds), !is.na(welo_mean_test)) %>%
     mutate(
-      SQS_z  = zscore(SQS_prob),
+      SQS_z  = zscore(SQS_logodds),
       welo_z = zscore(welo_mean_test),
       win_pct_test  = wins_total / n_serves_test,
       eff_test      = wins_rally_le3 / n_serves_test
@@ -118,11 +118,7 @@ process_tournament_gender <- function(tournament, gender) {
     df_sqs_first %>% select(ServerName, SQS_logodds) %>% rename(SQS_logodds_first = SQS_logodds),
     df_sqs_second %>% select(ServerName, SQS_logodds) %>% rename(SQS_logodds_second = SQS_logodds),
     by = "ServerName"
-  ) %>%
-    mutate(
-      SQS_prob_first  = plogis(SQS_logodds_first),
-      SQS_prob_second = plogis(SQS_logodds_second)
-    )
+  )
 
   df_test <- fread(testing_path)
 
