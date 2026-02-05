@@ -1,87 +1,62 @@
-# Serve Profile Analysis
+# Server Quality
 
-This repository contains analysis of tennis serving profiles from Grand Slams to explore serving archetypes and predict point outcomes.
+This is the code and data for “A Unified Server Quality Metric for Tennis,” which constructs a serve-quality score from Grand Slam point data and evaluates it against wElo baselines.
 
 ## Directory Structure
 
 ```
 .
-├── archived/
-│   ├── code/
-│   │   ├── new/
-│   │   └── old/
-│   ├── data/
-│   │   ├── processed/
-│   │   │   ├── model-testing-results/
-│   │   │   ├── new-model-results/
-│   │   │   ├── out-data/
-│   │   │   └── scaled-results/
-│   │   ├── rankings/
-│   │   └── sackmann/
-│   └── figures/
-│       ├── new/
-│       │   ├── all-serves/
-│       │   │   ├── us-open/
-│       │   │   └── wimbledon/
-│       │   ├── correlations/
-│       │   ├── second-serves-in/
-│       │   │   ├── us-open/
-│       │   │   └── wimbledon/
-│       │   └── variable-importance/
-│       │       ├── general/
-│       │       ├── us-open/
-│       │       └── wimbledon/
-│       ├── old/
-│       │   ├── first-serves/
-│       │   ├── linear-examples/
-│       │   ├── second-serves/
-│       │   └── winning-serves/
-│       └── player-effects/
-│           ├── 2-sds-away/
-│           │   ├── usopen/
-│           │   └── wimbledon/
-│           ├── by_year/
-│           │   ├── usopen/
-│           │   └── wimbledon/
-│           └── top-bottom-10/
-│               ├── usopen/
-│               └── wimbledon/
 ├── code/
-└── data/
+│   ├── 01_get-data.R
+│   ├── 02_welo.R
+│   ├── 03_split-year.R
+│   ├── 04_fix-time.R
+│   ├── 05_sqs.R
+│   └── 06_oos-eval.R
+├── data/
 │   ├── raw/
 │   ├── processed/
-│   │   ├── scaled/
+│   │   ├── combined/
+│   │   ├── subset/
+│   │   └── splits/
 │   └── results/
+│       └── importance/
+├── paper/
+│   └── main.pdf
+├── presentations/
+│   ├── cmsac2025.pdf
+│   └── lab.pdf
+└── serving.Rproj
 ```
 
 ## Data Processing Pipeline
 
-The analysis follows this workflow:
+The analysis follows this workflow (run from repo root):
 
-1. **`01_get_data.R`** - Combines raw match and points data, removes invalid serves
-2. **`02_welo.R`** - Adds Welo ratings and speed ratios for player analysis
-3. **`03_combine_years.R`** - Creates training/testing splits for model development
-4. **`04_elapsedtime_standardize.R`** - Fixes time gaps and creates standardized versions
-5. **`05_server_pattern_exploration.R`** - Performs server clustering analysis
+1. **`code/01_get-data.R`** - Combines raw match and points data, removes invalid serves
+2. **`code/02_welo.R`** - Adds pre-match wElo values and speed ratios for player analysis
+3. **`code/03_split-year.R`** - Creates match-level 80/20 splits within each year and writes train/test files
+4. **`code/04_fix-time.R`** - Optional: fixes elapsed-time gaps in the train/test files
+5. **`code/05_sqs.R`** - Fits first/second-serve SQS models and saves outputs
+6. **`code/06_oos-eval.R`** - Evaluates first/second-serve SQS in testing data
 
 ## Key Features
 
-- **Welo ratings** for player strength assessment
+- **Pre-match wElo ratings** for player strength assessment
 - **Speed ratios** for serve analysis
-- **Time standardization** to fix data gaps
-- **Z-score standardization** for key variables
-- **Server pattern clustering** analysis
-- **Training/testing splits** for model validation
+- **Elapsed-time gap correction** at the match level
+- **Match-level train/test splits**
+- **Separate first-serve and second-serve SQS models**
 
 ## Usage
 
-Run scripts from the `code/` directory:
+Run scripts from the repo root:
 
 ```zsh
-cd code
-Rscript 01_get_data.R
-Rscript 02_welo.R
-Rscript 03_combine_years.R
-Rscript 04_elapsedtime_standardize.R
-Rscript 05_server_pattern_exploration.R
-``` 
+Rscript code/01_get-data.R
+Rscript code/02_welo.R
+Rscript code/03_split-year.R
+Rscript code/04_fix-time.R  # optional
+Rscript code/05_sqs.R
+Rscript code/06_oos-eval.R
+```
