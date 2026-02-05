@@ -5,10 +5,15 @@
 # finder info
 .DS_Store
 
+# manuscript
+paper
+
+# old code
+archived
+
 #########
 ### R ###
 #########
-
 
 # History files
 .Rhistory
