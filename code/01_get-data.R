@@ -8,7 +8,10 @@ library(tidyverse)
 #-----------------------------------------------------------------------------------------------------
 
 # Generalized helper function to clean one year's data for a given tournament
-process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "../data/raw", out_path = "../data/processed") {
+process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "data/raw", out_path = "data/processed") {
+  short_tournament <- ifelse(tournament == "usopen", "us", "wimb")
+  dir.create(file.path(out_path, "combined"), recursive = TRUE, showWarnings = FALSE)
+
   # Compose file paths
   matches_file <- paste0(raw_path, "/", year, "-", tournament, "-matches.csv")
   points_file  <- paste0(raw_path, "/", year, "-", tournament, "-points.csv")
@@ -27,7 +30,7 @@ process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "
                                          (ServeIndicator == 2 & PointWinner == 2), 1, 0))
   
   # Write cleaned data
-  output_file <- paste0(out_path, "/", tournament, "_", year, "_combined.csv")
+  output_file <- paste0(out_path, "/combined/", year, "_", short_tournament, ".csv")
   fwrite(combined, output_file)
   
   # Print summary
@@ -37,15 +40,13 @@ process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "
 
 #-----------------------------------------------------------------------------------------------------
 
-# Define years and tournament name
+# Define years and tournaments
 years <- c(2018, 2019, 2021, 2022, 2023, 2024)
-tournament <- "usopen"  # Change to "usopen" as needed
+tournaments <- c("wimbledon", "usopen")
 
-# Process all years for the selected tournament
-for (year in years) {
-  process_tournament_year(year, tournament = tournament)
+# Process all years for each tournament
+for (t in tournaments) {
+  for (year in years) {
+    process_tournament_year(year, tournament = t)
+  }
 }
-
-# read usopen 2021 to check
-usopen_2021 <- fread("../data/processed/usopen_2021_combined.csv")
-names(usopen_2021)
