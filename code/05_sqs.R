@@ -48,31 +48,70 @@ scale_cols <- function(d) {
     )
 }
 
-build_sqs <- function(model, profiles_z) {
-  b <- fixef(model)
-
-  re <- ranef(model)$ServerName
-  u  <- re[, "(Intercept)"]
-  names(u) <- rownames(re)
-
+build_sqs_with_ci <- function(model, profiles_z, server_re_name = "ServerName", level = 0.95) {
+  # fixed effects + covariance
+  b     <- fixef(model)
+  Vbeta <- as.matrix(vcov(model))
+  
+  # random effects with conditional variance (BLUP variance)
+  re_list <- ranef(model, condVar = TRUE)
+  re      <- re_list[[server_re_name]]
+  u_hat   <- re[, "(Intercept)"]
+  names(u_hat) <- rownames(re)
+  
+  postVar <- attr(re, "postVar") # array: 1 x 1 x J (for random intercept)
+  if (is.null(postVar)) {
+    warning("condVar not available; random-effect SEs will be NA")
+  }
+  
+  # fixed-effect design matrix for player profiles
   mm <- model.matrix(
     ~ avg_speed_z + sd_speed_z + location_entropy_z + modal_location,
     data = profiles_z
   )
-
+  
+  # align columns with fixef names
   cols <- intersect(colnames(mm), names(b))
-  mm <- mm[, cols, drop = FALSE]
+  mm2  <- mm[, cols, drop = FALSE]
   bvec <- b[cols]
-
-  measured <- as.numeric(mm %*% bvec)
-
-  u_vec <- u[profiles_z$ServerName]
+  
+  measured <- as.numeric(mm2 %*% bvec)
+  
+  # random intercept vector aligned to profiles
+  u_vec <- u_hat[profiles_z[[server_re_name]]]
   u_vec[is.na(u_vec)] <- 0
-
+  
+  # Var(SQS) = x'Vbeta x + Var(u_hat)
+  
+  # fixed part variance x'Vbeta x for each row
+  Vsub <- Vbeta[cols, cols, drop = FALSE]
+  var_fixed <- rowSums((mm2 %*% Vsub) * mm2)
+  
+  # random intercept conditional variance per server
+  var_u <- rep(NA_real_, nrow(profiles_z))
+  if (!is.null(postVar)) {
+    server_levels <- rownames(re)
+    idx <- match(profiles_z[[server_re_name]], server_levels)
+    var_u <- ifelse(is.na(idx), 0, as.numeric(postVar[1, 1, idx]))
+  }
+  
+  var_sqs <- var_fixed + var_u
+  se_sqs  <- sqrt(var_sqs)
+  
+  alpha <- 1 - level
+  zcrit <- qnorm(1 - alpha/2)
+  
+  sqs <- measured + u_vec
+  ci_low  <- sqs - zcrit * se_sqs
+  ci_high <- sqs + zcrit * se_sqs
+  
   tibble(
-    ServerName = profiles_z$ServerName,
-    SQS_logodds = measured + u_vec,
-    MeasuredSkill = measured,
+    ServerName     = profiles_z[[server_re_name]],
+    SQS_logodds    = sqs,
+    SE_SQS         = se_sqs,
+    CI_low         = ci_low,
+    CI_high        = ci_high,
+    MeasuredSkill  = measured,
     UnmeasuredCraft = u_vec
   )
 }
@@ -233,8 +272,8 @@ process_tournament_gender <- function(tournament, gender) {
     family = binomial()
   )
 
-  sqs_first  <- build_sqs(m1, serve1_profiles_z)
-  sqs_second <- build_sqs(m2, serve2_profiles_z)
+  sqs_first  <- build_sqs_with_ci(m1, serve1_profiles_z, server_re_name = "ServerName", level = 0.95)
+  sqs_second <- build_sqs_with_ci(m2, serve2_profiles_z, server_re_name = "ServerName", level = 0.95)
 
   sqs_first_out <- sqs_first %>%
     mutate(ServerName = str_to_title(ServerName)) %>%
