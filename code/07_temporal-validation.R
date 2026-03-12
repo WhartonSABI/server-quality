@@ -1,7 +1,6 @@
 rm(list = ls())
 
 library(tidyverse)
-library(data.table)
 library(lme4)
 
 train_years <- c(2018, 2019, 2021, 2022)
@@ -17,7 +16,7 @@ combine_years <- function(tournament, years, gender) {
   files <- paste0("data/processed/subset/", years, "_", tournament, "_", gender, ".csv")
   files <- files[file.exists(files)]
   if (length(files) == 0) return(NULL)
-  combined <- rbindlist(lapply(files, fread), use.names = TRUE, fill = TRUE)
+  combined <- map_dfr(files, ~ read_csv(.x, show_col_types = FALSE))
   combined %>%
     filter(ServeDepth != "", ServeWidth != "", !is.na(speed_ratio))
 }
@@ -87,12 +86,140 @@ build_sqs <- function(model, profiles_z) {
   )
 }
 
-zscore <- function(x) (x - mean(x, na.rm = TRUE)) / sd(x, na.rm = TRUE)
+safe_zscore <- function(x) {
+  mu <- mean(x, na.rm = TRUE)
+  sig <- sd(x, na.rm = TRUE)
+  if (!is.finite(sig) || sig == 0) {
+    return(rep(NA_real_, length(x)))
+  }
+  (x - mu) / sig
+}
+
+compute_standard_serve_stats <- function(df_train_clean, serve_num) {
+  serve_specific <- df_train_clean %>%
+    filter(ServeNumber == serve_num) %>%
+    group_by(ServerName) %>%
+    summarise(
+      n_serves_train_type = n(),
+      ace_rate_train = mean(is_ace, na.rm = TRUE),
+      # Proxy for "unreturned serve rate" using one-shot rallies
+      unreturned_rate_train = mean(rally_le1, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    filter(n_serves_train_type > 20)
+
+  overall <- df_train_clean %>%
+    group_by(ServerName) %>%
+    summarise(
+      first_serve_in_pct_train = mean(ServeNumber == 1, na.rm = TRUE),
+      first_serve_points_won_train = ifelse(
+        sum(ServeNumber == 1, na.rm = TRUE) > 0,
+        sum(server_won * (ServeNumber == 1), na.rm = TRUE) / sum(ServeNumber == 1, na.rm = TRUE),
+        NA_real_
+      ),
+      .groups = "drop"
+    )
+
+  serve_specific %>%
+    left_join(overall, by = "ServerName")
+}
+
+fit_random_effects_only <- function(df_train_clean, serve_num) {
+  df_model <- df_train_clean %>%
+    filter(ServeNumber == serve_num) %>%
+    group_by(ServerName) %>%
+    mutate(n_serves_train_type = n()) %>%
+    ungroup() %>%
+    filter(n_serves_train_type > 20) %>%
+    select(is_efficient, ServerName, ReturnerName)
+
+  if (nrow(df_model) == 0) {
+    return(tibble(ServerName = character(), re_only_logodds = numeric()))
+  }
+
+  fit <- tryCatch(
+    suppressWarnings(
+      glmer(
+        is_efficient ~ (1 | ServerName) + (1 | ReturnerName),
+        data = df_model,
+        family = binomial(),
+        control = glmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 2e5))
+      )
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(fit)) {
+    return(tibble(ServerName = character(), re_only_logodds = numeric()))
+  }
+
+  re <- ranef(fit)$ServerName
+  tibble(
+    ServerName = rownames(re),
+    re_only_logodds = as.numeric(re[, "(Intercept)"])
+  )
+}
+
+fit_single_predictor <- function(eval_df, success_col, total_col, predictor_col,
+                                 predictor_label, predictor_term, serve_type, outcome_label) {
+  model_df <- eval_df %>%
+    transmute(
+      successes = .data[[success_col]],
+      total = .data[[total_col]],
+      predictor_raw = .data[[predictor_col]]
+    ) %>%
+    mutate(predictor_z = safe_zscore(predictor_raw)) %>%
+    filter(is.finite(successes), is.finite(total), total > 0, is.finite(predictor_z))
+
+  n_servers <- nrow(model_df)
+  model_name <- paste0(outcome_label, "_", predictor_label, "_", serve_type)
+
+  if (n_servers < 3) {
+    return(tibble(
+      `Estimate` = NA_real_,
+      `Std. Error` = NA_real_,
+      `z value` = NA_real_,
+      `Pr(>|z|)` = NA_real_,
+      term = predictor_term,
+      model = model_name,
+      predictor = predictor_label,
+      outcome = outcome_label,
+      serve_type = serve_type,
+      n_servers = n_servers,
+      correlation = NA_real_
+    ))
+  }
+
+  fit <- glm(
+    cbind(successes, total - successes) ~ predictor_z,
+    family = binomial(),
+    data = model_df
+  )
+
+  cf <- as.data.frame(summary(fit)$coefficients)
+  cf$term <- rownames(cf)
+  rownames(cf) <- NULL
+  cf$term <- ifelse(cf$term == "predictor_z", predictor_term, cf$term)
+
+  outcome_rate <- model_df$successes / model_df$total
+  corr_val <- cor(model_df$predictor_z, outcome_rate, use = "complete.obs")
+
+  cf %>%
+    mutate(
+      model = model_name,
+      predictor = predictor_label,
+      outcome = outcome_label,
+      serve_type = serve_type,
+      n_servers = n_servers,
+      correlation = if_else(term == predictor_term, corr_val, NA_real_)
+    )
+}
 
 #-------------------------------------------------------------------------------
 # Evaluation (mirrors 06_oos-eval.R)
 
-run_temporal_eval <- function(df_test_clean, df_sqs, st = c("first", "second")) {
+run_temporal_eval <- function(df_test_clean, df_sqs, standard_stats, re_only_scores,
+                              fixed_only_scores, st = c("first", "second")) {
   st <- match.arg(st)
   serve_num <- ifelse(st == "first", 1, 2)
 
@@ -119,58 +246,63 @@ run_temporal_eval <- function(df_test_clean, df_sqs, st = c("first", "second")) 
     left_join(welo_baseline, by = "ServerName") %>%
     left_join(df_sqs %>% select(ServerName, all_of(sqs_col)), by = "ServerName") %>%
     rename(SQS_logodds = all_of(sqs_col)) %>%
-    filter(!is.na(SQS_logodds), !is.na(welo_mean_test)) %>%
-    mutate(
-      SQS_z        = zscore(SQS_logodds),
-      welo_z       = zscore(welo_mean_test),
-      win_pct_test = wins_total / n_serves_test,
-      eff_test     = wins_rally_le3 / n_serves_test
-    )
+    left_join(standard_stats, by = "ServerName") %>%
+    left_join(re_only_scores, by = "ServerName") %>%
+    left_join(fixed_only_scores, by = "ServerName")
 
-  n_servers <- nrow(eval_df)
-  if (n_servers < 3) {
-    message("  Too few servers for evaluation (", st, "); skipping.")
-    return(NULL)
-  }
+  required_predictors <- c(
+    "SQS_logodds", "welo_mean_test", "ace_rate_train", "unreturned_rate_train",
+    "first_serve_points_won_train", "first_serve_in_pct_train",
+    "re_only_logodds", "fixed_only_logodds"
+  )
+  eval_df <- eval_df %>%
+    filter(if_all(all_of(required_predictors), ~ is.finite(.x)))
 
-  m_win_sqs  <- glm(cbind(wins_total, n_serves_test - wins_total) ~ SQS_z,
-                     family = binomial, data = eval_df)
-  m_win_welo <- glm(cbind(wins_total, n_serves_test - wins_total) ~ welo_z,
-                     family = binomial, data = eval_df)
-  m_eff_sqs  <- glm(cbind(wins_rally_le3, n_serves_test - wins_rally_le3) ~ SQS_z,
-                     family = binomial, data = eval_df)
-  m_eff_welo <- glm(cbind(wins_rally_le3, n_serves_test - wins_rally_le3) ~ welo_z,
-                     family = binomial, data = eval_df)
-
-  cor_results <- tibble(
-    model = c(paste0("win_sqs_", st), paste0("win_welo_", st),
-              paste0("eff_sqs_", st), paste0("eff_welo_", st)),
-    term  = c("SQS_z", "welo_z", "SQS_z", "welo_z"),
-    correlation = c(
-      cor(eval_df$SQS_z,  eval_df$win_pct_test, use = "complete.obs"),
-      cor(eval_df$welo_z, eval_df$win_pct_test, use = "complete.obs"),
-      cor(eval_df$SQS_z,  eval_df$eff_test,     use = "complete.obs"),
-      cor(eval_df$welo_z, eval_df$eff_test,     use = "complete.obs")
-    ),
-    serve_type = st
+  predictor_specs <- tribble(
+    ~predictor_col, ~predictor_label, ~predictor_term,
+    "SQS_logodds", "sqs", "SQS_z",
+    "welo_mean_test", "welo", "welo_z",
+    "ace_rate_train", "ace_rate", "ace_rate_z",
+    "unreturned_rate_train", "unreturned_rate", "unreturned_rate_z",
+    "first_serve_points_won_train", "first_serve_points_won", "first_serve_points_won_z",
+    "first_serve_in_pct_train", "first_serve_in_pct", "first_serve_in_pct_z",
+    "re_only_logodds", "random_effects_only", "random_effects_only_z",
+    "fixed_only_logodds", "fixed_effects_only", "fixed_effects_only_z"
   )
 
-  extract_coefs <- function(model, model_name) {
-    cf <- as.data.frame(summary(model)$coefficients)
-    cf$term <- rownames(cf)
-    rownames(cf) <- NULL
-    cf$model <- model_name
-    cf
-  }
+  results_win <- pmap_dfr(
+    predictor_specs,
+    function(predictor_col, predictor_label, predictor_term) {
+      fit_single_predictor(
+        eval_df = eval_df,
+        success_col = "wins_total",
+        total_col = "n_serves_test",
+        predictor_col = predictor_col,
+        predictor_label = predictor_label,
+        predictor_term = predictor_term,
+        serve_type = st,
+        outcome_label = "win"
+      )
+    }
+  )
 
-  bind_rows(
-    extract_coefs(m_win_sqs,  paste0("win_sqs_",  st)),
-    extract_coefs(m_win_welo, paste0("win_welo_", st)),
-    extract_coefs(m_eff_sqs,  paste0("eff_sqs_",  st)),
-    extract_coefs(m_eff_welo, paste0("eff_welo_", st))
-  ) %>%
-    mutate(serve_type = st, n_servers = n_servers) %>%
-    left_join(cor_results, by = c("model", "term", "serve_type"))
+  results_eff <- pmap_dfr(
+    predictor_specs,
+    function(predictor_col, predictor_label, predictor_term) {
+      fit_single_predictor(
+        eval_df = eval_df,
+        success_col = "wins_rally_le3",
+        total_col = "n_serves_test",
+        predictor_col = predictor_col,
+        predictor_label = predictor_label,
+        predictor_term = predictor_term,
+        serve_type = st,
+        outcome_label = "eff"
+      )
+    }
+  )
+
+  bind_rows(results_win, results_eff)
 }
 
 #-------------------------------------------------------------------------------
@@ -203,6 +335,7 @@ process_temporal <- function(tournament, gender) {
       is_ace       = ifelse(ServeIndicator == 1, P1Ace, P2Ace),
       is_df        = ifelse(ServeIndicator == 1, P1DoubleFault, P2DoubleFault),
       server_won   = as.integer(ifelse(ServeIndicator == 1, PointWinner == 1, PointWinner == 2)),
+      rally_le1    = if_else(RallyCount <= 1, 1L, 0L),
       is_efficient = as.integer(server_won & (RallyCount <= 3))
     )
 
@@ -252,6 +385,22 @@ process_temporal <- function(tournament, gender) {
     mutate(ServerName = str_to_title(ServerName)) %>%
     arrange(desc(SQS_logodds))
 
+  fixed_only_first <- sqs_first %>%
+    select(ServerName, fixed_only_logodds = MeasuredSkill)
+  fixed_only_second <- sqs_second %>%
+    select(ServerName, fixed_only_logodds = MeasuredSkill)
+
+  df_clean_titled <- df_clean %>%
+    mutate(
+      ServerName = str_to_title(ServerName),
+      ReturnerName = str_to_title(ReturnerName)
+    )
+
+  stats_first <- compute_standard_serve_stats(df_clean_titled, serve_num = 1)
+  stats_second <- compute_standard_serve_stats(df_clean_titled, serve_num = 2)
+  re_only_first <- fit_random_effects_only(df_clean_titled, serve_num = 1)
+  re_only_second <- fit_random_effects_only(df_clean_titled, serve_num = 2)
+
   df_sqs <- full_join(
     sqs_first  %>% select(ServerName, SQS_logodds) %>% rename(SQS_logodds_first  = SQS_logodds),
     sqs_second %>% select(ServerName, SQS_logodds) %>% rename(SQS_logodds_second = SQS_logodds),
@@ -271,7 +420,24 @@ process_temporal <- function(tournament, gender) {
 
   # --- Evaluate ---
   message("  Evaluating on temporal test set ...")
-  results <- map_dfr(c("first", "second"), ~ run_temporal_eval(df_test_clean, df_sqs, .x))
+  results <- bind_rows(
+    run_temporal_eval(
+      df_test_clean = df_test_clean,
+      df_sqs = df_sqs,
+      standard_stats = stats_first,
+      re_only_scores = re_only_first,
+      fixed_only_scores = fixed_only_first,
+      st = "first"
+    ),
+    run_temporal_eval(
+      df_test_clean = df_test_clean,
+      df_sqs = df_sqs,
+      standard_stats = stats_second,
+      re_only_scores = re_only_second,
+      fixed_only_scores = fixed_only_second,
+      st = "second"
+    )
+  )
 
   # --- Write results ---
   out_dir <- file.path("data/results", tag, "evaluation")
