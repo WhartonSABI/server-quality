@@ -5,9 +5,6 @@
 # finder info
 .DS_Store
 
-# manuscript
-paper
-
 # latex internals
 *.tex
 *.bib
