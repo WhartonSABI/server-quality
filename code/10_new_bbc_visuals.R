@@ -4,13 +4,18 @@
 #   - One plot for Wimbledon men
 #   - One plot for Wimbledon women
 #   - Each plot shows the top 10 recurring servers on the SAME graph
-#   - Lines show projected First Serve SQS percentile over time
+#   - Lines show projected First Serve SQS over time
 #   - Dot size shows number of observed first serves
 #   - Eligible players must appear in at least 5 of the 8 Wimbledon years
 #
+# Outputs:
+#   1. Main version: pure/centered SQS
+#   2. Backup version: SQS percentile within year
+#
 # Notes:
 #   - Historical scores use the fixed-effect component of the modern SQS model.
-#   - Percentiles are computed within each tournament-year field.
+#   - Pure SQS plots use SQS_FE_centered, centered within each Wimbledon year.
+#   - Percentile plots use SQS_percentile, computed within each Wimbledon year.
 #   - This script uses Wimbledon only.
 
 rm(list = ls())
@@ -39,6 +44,7 @@ min_serves_model <- 20
 min_serves_plot <- 5
 
 # Require players to appear in at least this many of the 8 Wimbledon years.
+# Change to 6 if you want to be stricter.
 min_years_present <- 5
 
 # Number of recurring top servers to show on each gender-specific plot.
@@ -240,37 +246,58 @@ score_profiles_fixed_effects_only <- function(model, profiles_year_z) {
 
 select_recurring_top_servers <- function(sqs_year,
                                          min_years_present = 5,
-                                         n_players_show = 10) {
-  sqs_year %>%
+                                         n_players_show = 10,
+                                         selection_metric = c("centered_sqs", "percentile")) {
+  selection_metric <- match.arg(selection_metric)
+  
+  player_summary <- sqs_year %>%
     group_by(ServerName) %>%
     summarise(
       years_present = n_distinct(year),
       mean_percentile = mean(SQS_percentile, na.rm = TRUE),
       median_percentile = median(SQS_percentile, na.rm = TRUE),
       mean_centered_sqs = mean(SQS_FE_centered, na.rm = TRUE),
+      median_centered_sqs = median(SQS_FE_centered, na.rm = TRUE),
       total_serves = sum(n_serves, na.rm = TRUE),
       .groups = "drop"
     ) %>%
-    filter(years_present >= min_years_present) %>%
-    arrange(desc(mean_percentile), desc(total_serves)) %>%
+    filter(years_present >= min_years_present)
+  
+  if (selection_metric == "centered_sqs") {
+    player_summary <- player_summary %>%
+      arrange(desc(mean_centered_sqs), desc(total_serves))
+  }
+  
+  if (selection_metric == "percentile") {
+    player_summary <- player_summary %>%
+      arrange(desc(mean_percentile), desc(total_serves))
+  }
+  
+  player_summary %>%
     slice_head(n = n_players_show)
 }
 
 # ------------------------------------------------------------------------------
-# Main combined top-10 plot
+# Main combined top-10 plot function
 
 make_top10_same_plot <- function(sqs_year,
                                  tournament,
                                  gender,
+                                 y_metric = c("centered_sqs", "percentile"),
                                  min_years_present = 5,
-                                 n_players_show = 10) {
+                                 n_players_show = 10,
+                                 selection_metric = c("centered_sqs", "percentile")) {
+  y_metric <- match.arg(y_metric)
+  selection_metric <- match.arg(selection_metric)
+  
   tournament_label <- tournament_label_for(tournament)
   gender_label <- gender_label_for(gender)
   
   selected_players <- select_recurring_top_servers(
     sqs_year = sqs_year,
     min_years_present = min_years_present,
-    n_players_show = n_players_show
+    n_players_show = n_players_show,
+    selection_metric = selection_metric
   )
   
   if (nrow(selected_players) == 0) {
@@ -289,25 +316,86 @@ make_top10_same_plot <- function(sqs_year,
     semi_join(selected_players, by = "ServerName") %>%
     left_join(
       selected_players %>%
-        select(ServerName, mean_percentile, years_present),
+        select(
+          ServerName,
+          mean_percentile,
+          mean_centered_sqs,
+          years_present
+        ),
       by = "ServerName"
-    ) %>%
-    mutate(
-      ServerName = fct_reorder(ServerName, mean_percentile, .desc = TRUE)
     )
   
-  # Label each player at their final observed year.
+  if (selection_metric == "centered_sqs") {
+    plot_df <- plot_df %>%
+      mutate(ServerName = fct_reorder(ServerName, mean_centered_sqs, .desc = TRUE))
+  }
+  
+  if (selection_metric == "percentile") {
+    plot_df <- plot_df %>%
+      mutate(ServerName = fct_reorder(ServerName, mean_percentile, .desc = TRUE))
+  }
+  
   label_df <- plot_df %>%
     group_by(ServerName) %>%
     filter(year == max(year, na.rm = TRUE)) %>%
     slice_max(order_by = n_serves, n = 1, with_ties = FALSE) %>%
     ungroup()
   
+  if (y_metric == "centered_sqs") {
+    y_var <- "SQS_FE_centered"
+    
+    plot_title <- paste0("Top Wimbledon Servers Over Time: ", gender_label)
+    plot_subtitle <- paste0(
+      serve_label,
+      " SQS, centered within year; top ",
+      n_players_show,
+      " recurring servers"
+    )
+    y_axis_label <- "Projected SQS, centered within Wimbledon year"
+    plot_caption <- paste0(
+      "Players are selected by average centered SQS among those appearing in ",
+      min_years_present,
+      "+ Wimbledon years from 2016–2019 and 2021–2024. ",
+      "Positive values indicate above-average projected serve quality relative to that year's Wimbledon field. "
+      # "Dot size reflects number of observed first serves. ",
+      # "Historical scores use the fixed-effect component of the modern SQS model."
+    )
+    
+    y_scale <- scale_y_continuous()
+  }
+  
+  if (y_metric == "percentile") {
+    y_var <- "SQS_percentile"
+    
+    plot_title <- paste0("Top Wimbledon Servers Over Time: ", gender_label)
+    plot_subtitle <- paste0(
+      serve_label,
+      " SQS percentiles within year; top ",
+      n_players_show,
+      " recurring servers"
+    )
+    y_axis_label <- "Projected SQS percentile within Wimbledon year"
+    plot_caption <- paste0(
+      "Players are selected by average SQS percentile among those appearing in ",
+      min_years_present,
+      "+ Wimbledon years from 2016–2019 and 2021–2024. ",
+      "Percentiles are computed within each year and are similar to a within-year ranking. "
+      # "Dot size reflects number of observed first serves. ",
+      # "Historical scores use the fixed-effect component of the modern SQS model."
+    )
+    
+    y_scale <- scale_y_continuous(
+      limits = c(0, 100),
+      breaks = c(0, 25, 50, 75, 100),
+      labels = function(x) paste0(x, "th")
+    )
+  }
+  
   p <- ggplot(
     plot_df,
     aes(
       x = year,
-      y = SQS_percentile,
+      y = .data[[y_var]],
       color = ServerName,
       group = ServerName
     )
@@ -329,33 +417,18 @@ make_top10_same_plot <- function(sqs_year,
       breaks = years_keep,
       limits = c(min(years_keep), max(years_keep) + 1)
     ) +
-    scale_y_continuous(
-      limits = c(0, 100),
-      breaks = c(0, 25, 50, 75, 100),
-      labels = function(x) paste0(x, "th")
-    ) +
+    y_scale +
     scale_size_continuous(
       name = "Observed\nfirst serves",
       range = c(2, 7)
     ) +
     labs(
-      title = paste0("Top Wimbledon Servers Over Time: ", gender_label),
-      subtitle = paste0(
-        serve_label,
-        " SQS Percentiles, Top ",
-        n_players_show,
-        " Recurring Servers"
-      ),
+      title = plot_title,
+      subtitle = plot_subtitle,
       x = NULL,
-      y = "Projected SQS percentile within year",
+      y = y_axis_label,
       color = "Server",
-      caption = paste0(
-        "Players are selected by average projected SQS percentile among those appearing in ",
-        min_years_present,
-        "+ Wimbledon years from 2016–2019 and 2021–2024. ",
-        "Dot size reflects number of observed first serves. ",
-        "Historical scores use the fixed-effect component of the modern SQS model."
-      )
+      caption = plot_caption
     ) +
     theme_minimal(base_size = 14) +
     theme(
@@ -519,80 +592,142 @@ process_wimbledon_gender <- function(gender) {
   )
   
   # --------------------------------------------------------------------------
-  # Make combined top-10 plot.
+  # Make pure/centered SQS plot.
+  # This is the main version because it preserves the magnitude of SQS differences.
   
-  plot_out <- make_top10_same_plot(
+  centered_out <- make_top10_same_plot(
     sqs_year = sqs_year,
     tournament = tournament,
     gender = gender,
+    y_metric = "centered_sqs",
     min_years_present = min_years_present,
-    n_players_show = n_players_show
+    n_players_show = n_players_show,
+    selection_metric = "centered_sqs"
   )
   
-  if (is.null(plot_out)) {
-    warning("No combined top-10 plot produced for ", tag)
-    return(invisible(sqs_year))
+  if (!is.null(centered_out)) {
+    write_csv(
+      centered_out$selected_players,
+      file.path(
+        out_dir,
+        paste0(
+          "selected_top",
+          n_players_show,
+          "_recurring_servers_centered_sqs_",
+          tag,
+          "_min",
+          min_years_present,
+          "years.csv"
+        )
+      )
+    )
+    
+    write_csv(
+      centered_out$plot_df,
+      file.path(
+        out_dir,
+        paste0(
+          "plot_data_top",
+          n_players_show,
+          "_same_plot_centered_sqs_",
+          tag,
+          "_min",
+          min_years_present,
+          "years.csv"
+        )
+      )
+    )
+    
+    ggsave(
+      filename = file.path(
+        out_dir,
+        paste0(
+          "top",
+          n_players_show,
+          "_same_plot_centered_sqs_",
+          tag,
+          "_min",
+          min_years_present,
+          "years.png"
+        )
+      ),
+      plot = centered_out$plot,
+      width = 14,
+      height = 8,
+      dpi = 320
+    )
+    
+    message("Saved centered SQS plot for ", tag)
   }
   
-  p <- plot_out$plot
-  selected_players <- plot_out$selected_players
-  plot_df <- plot_out$plot_df
+  # --------------------------------------------------------------------------
+  # Make percentile plot.
+  # This is a backup version because it is easier to read but more rank-like.
   
-  # Save selected player table.
-  write_csv(
-    selected_players,
-    file.path(
-      out_dir,
-      paste0(
-        "selected_top",
-        n_players_show,
-        "_recurring_servers_",
-        tag,
-        "_min",
-        min_years_present,
-        "years.csv"
+  percentile_out <- make_top10_same_plot(
+    sqs_year = sqs_year,
+    tournament = tournament,
+    gender = gender,
+    y_metric = "percentile",
+    min_years_present = min_years_present,
+    n_players_show = n_players_show,
+    selection_metric = "percentile"
+  )
+  
+  if (!is.null(percentile_out)) {
+    write_csv(
+      percentile_out$selected_players,
+      file.path(
+        out_dir,
+        paste0(
+          "selected_top",
+          n_players_show,
+          "_recurring_servers_percentile_",
+          tag,
+          "_min",
+          min_years_present,
+          "years.csv"
+        )
       )
     )
-  )
-  
-  # Save data used in plot.
-  write_csv(
-    plot_df,
-    file.path(
-      out_dir,
-      paste0(
-        "plot_data_top",
-        n_players_show,
-        "_same_plot_",
-        tag,
-        "_min",
-        min_years_present,
-        "years.csv"
+    
+    write_csv(
+      percentile_out$plot_df,
+      file.path(
+        out_dir,
+        paste0(
+          "plot_data_top",
+          n_players_show,
+          "_same_plot_percentile_",
+          tag,
+          "_min",
+          min_years_present,
+          "years.csv"
+        )
       )
     )
-  )
-  
-  # Save figure.
-  ggsave(
-    filename = file.path(
-      out_dir,
-      paste0(
-        "top",
-        n_players_show,
-        "_same_plot_",
-        tag,
-        "_min",
-        min_years_present,
-        "years.png"
-      )
-    ),
-    plot = p,
-    width = 14,
-    height = 8,
-    dpi = 320
-  )
-  
-  message("Saved combined top-10 plot for ", tag)
+    
+    ggsave(
+      filename = file.path(
+        out_dir,
+        paste0(
+          "top",
+          n_players_show,
+          "_same_plot_percentile_",
+          tag,
+          "_min",
+          min_years_present,
+          "years.png"
+        )
+      ),
+      plot = percentile_out$plot,
+      width = 14,
+      height = 8,
+      dpi = 320
+    )
+    
+    message("Saved percentile plot for ", tag)
+  }
   
   invisible(sqs_year)
 }
@@ -605,28 +740,5 @@ all_results <- list()
 for (g in genders) {
   tag <- paste0(tournament, "_", g)
   all_results[[tag]] <- process_wimbledon_gender(g)
-}
-
-# Combined output if useful.
-combined_sqs_year <- bind_rows(
-  lapply(names(all_results), function(tag) {
-    x <- all_results[[tag]]
-    if (is.null(x)) return(NULL)
-    
-    parts <- str_split(tag, "_", simplify = TRUE)
-    
-    x %>%
-      mutate(
-        tournament = parts[1],
-        gender = parts[2]
-      )
-  })
-)
-
-if (nrow(combined_sqs_year) > 0) {
-  write_csv(
-    combined_sqs_year,
-    file.path(out_dir, "historical_projected_sqs_wimbledon_men_women.csv")
-  )
 }
 
