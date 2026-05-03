@@ -342,14 +342,12 @@ make_top10_same_plot <- function(sqs_year,
       title = paste0("Top Wimbledon Servers Over Time: ", gender_label),
       subtitle = paste0(
         serve_label,
-        " projected SQS percentile, top ",
+        " SQS Percentiles, Top ",
         n_players_show,
-        " recurring servers with appearances in ",
-        min_years_present,
-        "+ of 8 years"
+        " Recurring Servers"
       ),
       x = NULL,
-      y = "Projected SQS percentile within Wimbledon year",
+      y = "Projected SQS percentile within year",
       color = "Server",
       caption = paste0(
         "Players are selected by average projected SQS percentile among those appearing in ",
