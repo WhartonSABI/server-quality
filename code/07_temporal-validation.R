@@ -1,3 +1,14 @@
+# Added by the 2026-08-27 inactive-project compression migration.
+.codex_write_csv_gz <- function(x, file = "", ...) {
+  if (is.character(file) && length(file) == 1L && grepl("\\.gz$", file, ignore.case = TRUE)) {
+    con <- gzfile(file, open = "wt")
+    on.exit(close(con), add = TRUE)
+    utils::write.csv(x, file = con, ...)
+  } else {
+    utils::write.csv(x, file = file, ...)
+  }
+}
+
 rm(list = ls())
 
 library(tidyverse)
@@ -13,7 +24,7 @@ genders     <- c("men", "women")
 # Helpers (inlined from 03/05/06)
 
 combine_years <- function(tournament, years, gender) {
-  files <- paste0("data/processed/subset/", years, "_", tournament, "_", gender, ".csv")
+  files <- paste0("data/processed/subset/", years, "_", tournament, "_", gender, ".csv.gz")
   files <- files[file.exists(files)]
   if (length(files) == 0) return(NULL)
   combined <- map_dfr(files, ~ read_csv(.x, show_col_types = FALSE))
@@ -442,8 +453,8 @@ process_temporal <- function(tournament, gender) {
   # --- Write results ---
   out_dir <- file.path("data/results", tag, "evaluation")
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
-  write.csv(results, file.path(out_dir, "temporal_combined.csv"), row.names = FALSE)
-  message("  Results written to ", file.path(out_dir, "temporal_combined.csv"))
+  .codex_write_csv_gz(results, file.path(out_dir, "temporal_combined.csv.gz"), row.names = FALSE)
+  message("  Results written to ", file.path(out_dir, "temporal_combined.csv.gz"))
 }
 
 for (t in tournaments) {

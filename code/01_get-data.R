@@ -11,8 +11,8 @@ process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "
   dir.create(file.path(out_path, "combined"), recursive = TRUE, showWarnings = FALSE)
   
   # Compose file paths
-  matches_file <- paste0(raw_path, "/", year, "-", tournament, "-matches.csv")
-  points_file  <- paste0(raw_path, "/", year, "-", tournament, "-points.csv")
+  matches_file <- paste0(raw_path, "/", year, "-", tournament, "-matches.csv.gz")
+  points_file  <- paste0(raw_path, "/", year, "-", tournament, "-points.csv.gz")
   
   # Load data
   # Drop only columns that are fully NA, not columns that merely contain some NAs
@@ -90,7 +90,7 @@ process_tournament_year <- function(year, tournament = "wimbledon", raw_path = "
     )
   
   # Write cleaned data
-  output_file <- paste0(out_path, "/combined/", year, "_", short_tournament, ".csv")
+  output_file <- paste0(out_path, "/combined/", year, "_", short_tournament, ".csv.gz")
   fwrite(combined, output_file)
   
   # Print summary

@@ -1,3 +1,14 @@
+# Added by the 2026-08-27 inactive-project compression migration.
+.codex_write_csv_gz <- function(x, file = "", ...) {
+  if (is.character(file) && length(file) == 1L && grepl("\\.gz$", file, ignore.case = TRUE)) {
+    con <- gzfile(file, open = "wt")
+    on.exit(close(con), add = TRUE)
+    utils::write.csv(x, file = con, ...)
+  } else {
+    utils::write.csv(x, file = file, ...)
+  }
+}
+
 rm(list = ls())
 library(tidyverse)
 library(lme4)
@@ -247,16 +258,16 @@ run_eval_for_serve_type <- function(df_test_clean, df_sqs, standard_stats, re_on
 process_tournament_gender <- function(tournament, gender) {
   tag_prefix <- tag_prefix_for(tournament, gender)
 
-  training_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_train.csv"))
-  testing_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_test.csv"))
+  training_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_train.csv.gz"))
+  testing_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_test.csv.gz"))
   output_dir <- file.path("data/results", tag_prefix)
   evaluation_dir <- file.path(output_dir, "evaluation")
   rankings_dir <- file.path(output_dir, "rankings")
   dir.create(evaluation_dir, recursive = TRUE, showWarnings = FALSE)
   dir.create(rankings_dir, recursive = TRUE, showWarnings = FALSE)
 
-  metrics_first_path <- file.path(rankings_dir, "first.csv")
-  metrics_second_path <- file.path(rankings_dir, "second.csv")
+  metrics_first_path <- file.path(rankings_dir, "first.csv.gz")
+  metrics_second_path <- file.path(rankings_dir, "second.csv.gz")
 
   if (!file.exists(training_path) ||
       !file.exists(testing_path) ||
@@ -308,9 +319,9 @@ process_tournament_gender <- function(tournament, gender) {
 
   results_all_types <- bind_rows(results_first, results_second)
 
-  write.csv(
+  .codex_write_csv_gz(
     results_all_types,
-    file = file.path(evaluation_dir, "combined.csv"),
+    file = file.path(evaluation_dir, "combined.csv.gz"),
     row.names = FALSE
   )
 }

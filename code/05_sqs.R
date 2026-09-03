@@ -1,3 +1,14 @@
+# Added by the 2026-08-27 inactive-project compression migration.
+.codex_write_csv_gz <- function(x, file = "", ...) {
+  if (is.character(file) && length(file) == 1L && grepl("\\.gz$", file, ignore.case = TRUE)) {
+    con <- gzfile(file, open = "wt")
+    on.exit(close(con), add = TRUE)
+    utils::write.csv(x, file = con, ...)
+  } else {
+    utils::write.csv(x, file = file, ...)
+  }
+}
+
 rm(list = ls())
 library(tidyverse)
 library(data.table)
@@ -202,15 +213,15 @@ eval_by_serve_type <- function(df_test_clean, sqs_tbl, out_dir, serve_num, tag_l
   ) %>%
     mutate(serve_type = tag_label)
 
-  out_path <- file.path(out_dir, paste0(tag_label, ".csv"))
+  out_path <- file.path(out_dir, paste0(tag_label, ".csv.gz"))
   write_csv(metrics, out_path)
 }
 
 process_tournament_gender <- function(tournament, gender) {
   tag_prefix <- tag_prefix_for(tournament, gender)
 
-  training_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_train.csv"))
-  testing_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_test.csv"))
+  training_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_train.csv.gz"))
+  testing_path <- file.path("data/processed/splits", paste0(tournament, "_", gender, "_test.csv.gz"))
 
   output_dir <- file.path("data/results", tag_prefix)
   evaluation_dir <- file.path(output_dir, "evaluation")
@@ -282,8 +293,8 @@ process_tournament_gender <- function(tournament, gender) {
     mutate(ServerName = str_to_title(ServerName)) %>%
     arrange(desc(SQS_logodds))
 
-  write.csv(sqs_first_out, file.path(rankings_dir, "first.csv"), row.names = FALSE)
-  write.csv(sqs_second_out, file.path(rankings_dir, "second.csv"), row.names = FALSE)
+  .codex_write_csv_gz(sqs_first_out, file.path(rankings_dir, "first.csv.gz"), row.names = FALSE)
+  .codex_write_csv_gz(sqs_second_out, file.path(rankings_dir, "second.csv.gz"), row.names = FALSE)
 
   df_test <- fread(testing_path)
   df_test_clean <- df_test %>%

@@ -1,3 +1,14 @@
+# Added by the 2026-08-27 inactive-project compression migration.
+.codex_write_csv_gz <- function(x, file = "", ...) {
+  if (is.character(file) && length(file) == 1L && grepl("\\.gz$", file, ignore.case = TRUE)) {
+    con <- gzfile(file, open = "wt")
+    on.exit(close(con), add = TRUE)
+    utils::write.csv(x, file = con, ...)
+  } else {
+    utils::write.csv(x, file = file, ...)
+  }
+}
+
 rm(list = ls())
 library(tidyverse)
 library(data.table)
@@ -50,15 +61,15 @@ fix_elapsed_time <- function(df) {
 process_split <- function(tournament, gender, split) {
   subset_input_path <- file.path(
     "data/processed/splits",
-    paste0(tournament, "_", gender, "_", split, ".csv")
+    paste0(tournament, "_", gender, "_", split, ".csv.gz")
   )
   subset_output_path <- file.path(
     "data/processed/splits",
-    paste0(tournament, "_", gender, "_", split, ".csv")
+    paste0(tournament, "_", gender, "_", split, ".csv.gz")
   )
   final_output_path <- file.path(
     "data/processed/splits",
-    paste0(tournament, "_", gender, "_", split, ".csv")
+    paste0(tournament, "_", gender, "_", split, ".csv.gz")
   )
 
   if (!file.exists(subset_input_path)) {
@@ -68,8 +79,8 @@ process_split <- function(tournament, gender, split) {
 
   df <- as.data.table(read.csv(subset_input_path))
   df <- fix_elapsed_time(df)
-  write.csv(df, subset_output_path, row.names = FALSE)
-  write.csv(df, final_output_path, row.names = FALSE)
+  .codex_write_csv_gz(df, subset_output_path, row.names = FALSE)
+  .codex_write_csv_gz(df, final_output_path, row.names = FALSE)
 }
 
 for (t in tournaments) {

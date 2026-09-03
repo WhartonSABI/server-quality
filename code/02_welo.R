@@ -1,3 +1,14 @@
+# Added by the 2026-08-27 inactive-project compression migration.
+.codex_write_csv_gz <- function(x, file = "", ...) {
+  if (is.character(file) && length(file) == 1L && grepl("\\.gz$", file, ignore.case = TRUE)) {
+    con <- gzfile(file, open = "wt")
+    on.exit(close(con), add = TRUE)
+    utils::write.csv(x, file = con, ...)
+  } else {
+    utils::write.csv(x, file = file, ...)
+  }
+}
+
 rm(list = ls())
 
 library(welo)
@@ -114,11 +125,11 @@ process_tournament_year <- function(year, tournament) {
   
   importance_file <- ifelse(
     tournament == "wimbledon",
-    "data/results/importance/grass.csv",
-    "data/results/importance/hard.csv"
+    "data/results/importance/grass.csv.gz",
+    "data/results/importance/hard.csv.gz"
   )
   
-  file_base <- paste0("data/processed/combined/", year, "_", short_tournament, ".csv")
+  file_base <- paste0("data/processed/combined/", year, "_", short_tournament, ".csv.gz")
   
   cat("\nProcessing:", tournament, year, "\n")
   
@@ -202,11 +213,11 @@ process_tournament_year <- function(year, tournament) {
   subset_f <- convert_elapsed(subset_f)
   
   # Write output
-  men_outfile <- paste0("data/processed/subset/", year, "_", short_tournament, "_men.csv")
-  women_outfile <- paste0("data/processed/subset/", year, "_", short_tournament, "_women.csv")
+  men_outfile <- paste0("data/processed/subset/", year, "_", short_tournament, "_men.csv.gz")
+  women_outfile <- paste0("data/processed/subset/", year, "_", short_tournament, "_women.csv.gz")
   
-  write.csv(subset_m, men_outfile, row.names = FALSE)
-  write.csv(subset_f, women_outfile, row.names = FALSE)
+  .codex_write_csv_gz(subset_m, men_outfile, row.names = FALSE)
+  .codex_write_csv_gz(subset_f, women_outfile, row.names = FALSE)
   
   cat("Wrote:", men_outfile, "\n")
   cat("Wrote:", women_outfile, "\n")

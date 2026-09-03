@@ -106,7 +106,7 @@ safe_sd <- function(x) {
 load_tournament_gender_data <- function(tournament, gender) {
   files <- file.path(
     input_dir,
-    paste0(years_keep, "_", tournament, "_", gender, ".csv")
+    paste0(years_keep, "_", tournament, "_", gender, ".csv.gz")
   )
   
   existing_files <- files[file.exists(files)]
@@ -588,7 +588,7 @@ process_wimbledon_gender <- function(gender) {
   # Save all scored player-years.
   write_csv(
     sqs_year,
-    file.path(out_dir, paste0("historical_projected_sqs_", tag, ".csv"))
+    file.path(out_dir, paste0("historical_projected_sqs_", tag, ".csv.gz"))
   )
   
   # --------------------------------------------------------------------------
@@ -617,7 +617,7 @@ process_wimbledon_gender <- function(gender) {
           tag,
           "_min",
           min_years_present,
-          "years.csv"
+          "years.csv.gz"
         )
       )
     )
@@ -633,7 +633,7 @@ process_wimbledon_gender <- function(gender) {
           tag,
           "_min",
           min_years_present,
-          "years.csv"
+          "years.csv.gz"
         )
       )
     )
@@ -686,7 +686,7 @@ process_wimbledon_gender <- function(gender) {
           tag,
           "_min",
           min_years_present,
-          "years.csv"
+          "years.csv.gz"
         )
       )
     )
@@ -702,7 +702,7 @@ process_wimbledon_gender <- function(gender) {
           tag,
           "_min",
           min_years_present,
-          "years.csv"
+          "years.csv.gz"
         )
       )
     )

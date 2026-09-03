@@ -6,7 +6,7 @@ library(data.table)
 
 #--------------------------------------------------------------------------------
 combine_years <- function(tournament, years, gender) {
-  files <- paste0("data/processed/subset/", years, "_", tournament, "_", gender, ".csv")
+  files <- paste0("data/processed/subset/", years, "_", tournament, "_", gender, ".csv.gz")
   data_list <- lapply(files, fread)
   combined <- rbindlist(data_list, use.names = TRUE, fill = TRUE)
 
@@ -49,7 +49,7 @@ for (t in tournaments) {
     testing <- bind_rows(testing)
 
     # Write outputs for downstream scripts
-    fwrite(training, paste0("data/processed/splits/", t, "_", g, "_train.csv"))
-    fwrite(testing,  paste0("data/processed/splits/", t, "_", g, "_test.csv"))
+    fwrite(training, paste0("data/processed/splits/", t, "_", g, "_train.csv.gz"))
+    fwrite(testing,  paste0("data/processed/splits/", t, "_", g, "_test.csv.gz"))
   }
 }
